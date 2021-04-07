@@ -1,0 +1,29 @@
+#
+# Copyright 2014, General Dynamics C4 Systems
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+# generated python bytecode
+*.pyc
+
+# latex generated files
+*.aux
+*.log
+*.out
+*.lof
+*.lot
+*.bbl
+*.blg
+*.toc
+*.mpx
+
+tools/parsetab.py
+manual/env.tex
+manual/manual.pdf
+manual/stage
+manual/doxygen-output
+manual/generated
+
+# Emacs backups
+*~

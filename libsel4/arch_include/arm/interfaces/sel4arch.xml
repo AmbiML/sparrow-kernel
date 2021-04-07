@@ -1,0 +1,312 @@
+<?xml version="1.0" ?>
+<!--
+     Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+
+     SPDX-License-Identifier: BSD-2-Clause
+-->
+
+<api name="ObjectApiArm" label_prefix="arm_">
+    <interface name="seL4_ARM_PageTable" manual_name="Page Table"
+        cap_description="Capability to the page table being operated on.">
+        <method id="ARMPageTableMap" name="Map" manual_label="pagetable_map">
+            <brief>
+                Map a page table into an address space.
+            </brief>
+            <description>
+                Takes a VSpace capability as an argument,
+                and installs a reference to the invoked
+                <texttt text='PageTable'/> in the VSpace according to the provided virtual address.
+                If higher-level paging structures do not exist for the virtual address
+                this operation will fail, returning a seL4_FailedLookup error. If the page table
+                is already mapped this operation will fail, returning a seL4_InvalidCapability error. If
+                another object is already mapped at this level for the virtual address
+                this operation will fail, returning a seL4_DeleteFirst error.
+            </description>
+            <param dir="in" name="vspace" type="seL4_CPtr"
+            description="Capability to the VSpace which will contain the mapping.
+                Must be assigned to an ASID pool."/>
+            <param dir="in" name="vaddr" type="seL4_Word"
+            description="Virtual address to map the page into."/>
+            <param dir="in" name="attr" type="seL4_ARM_VMAttributes">
+                <description> 
+                    VM Attributes for the mapping. <docref>Possible values for this type are given in <autoref label="ch:vspace"/>  .</docref>
+                </description>
+            </param>
+        </method>
+        <method id="ARMPageTableUnmap" name="Unmap" manual_label="pagetable_unmap">
+            <brief>
+                Unmap a page table from its <texttt text="Page Directory"/> and zero it out.
+            </brief>
+            <description>
+                Removes the reference to the invoked <texttt text="Page Table"/> from its
+                containing <texttt text="Page Directory"/>.
+            </description>
+        </method>
+    </interface>
+    <interface name="seL4_ARM_IOPageTable" manual_name="I/O Page Table"
+        cap_description="Capability to the I/O page table being operated on.">
+        <method id="ARMIOPageTableMap" name="Map" condition="defined(CONFIG_ARM_SMMU)">
+            <param dir="in" name="iospace" type="seL4_ARM_IOSpace"/>
+            <param dir="in" name="ioaddr" type="seL4_Word"/>
+        </method>
+        <method id="ARMIOPageTableUnmap" name="Unmap" condition="defined(CONFIG_ARM_SMMU)">
+        </method>
+    </interface>
+    <interface name="seL4_ARM_Page" manual_name="Page"
+        cap_description="Capability to the page being operated on.">
+        <method id="ARMPageMap" name="Map">
+            <brief>
+                Map a page into an address space or update the mapping attributes.
+            </brief>
+            <description>
+                Takes a VSpace capability, as an
+                argument and installs a reference
+                to the given <texttt text="Page"/> in the lowest-level unmapped paging structure
+		corresponding to the given address, or updates the mapping attributes if the page is
+		already mapped at this address. If the required paging structures are not present
+                this operation will fail, returning a seL4_FailedLookup error. The page must not
+		already be mapped through this capability in a different VSpace or at a different
+		address; the page may be mapped in multiple VSpaces by copying the capability.
+            </description>
+            <param dir="in" name="vspace" type="seL4_CPtr"
+            description="Capability to the VSpace which will contain the mapping.
+                Must be assigned to an ASID pool."/>
+            <param dir="in" name="vaddr" type="seL4_Word"
+            description="Virtual address to map the page into."/>
+            <param dir="in" name="rights" type="seL4_CapRights_t">
+                <description>
+                    Rights for the mapping.<docref>Possible values for this type are given in <autoref label="sec:cap_rights"/>  .</docref>
+                </description>
+            </param>
+            <param dir="in" name="attr" type="seL4_ARM_VMAttributes">
+                <description>
+                    VM Attributes for the mapping.<docref>Possible values for this type are given in <autoref label="ch:vspace"/>  .</docref>
+                </description>
+            </param>
+        </method>
+        <method id="ARMPageUnmap" name="Unmap">
+            <brief>
+                Unmap a page.
+            </brief>
+            <description>
+                Removes an existing mapping.
+            </description>
+        </method>
+        <method id="ARMPageMapIO" name="MapIO" condition="defined(CONFIG_ARM_SMMU)" manual_name="Map I/O">
+            <brief>
+                
+            </brief>
+            <description>
+
+            </description>
+            <param dir="in" name="iospace" type="seL4_ARM_IOSpace"/>
+            <param dir="in" name="rights" type="seL4_CapRights_t"/>
+            <param dir="in" name="ioaddr" type="seL4_Word"/>
+        </method>
+        <method id="ARMPageClean_Data" name="Clean_Data" manual_name="Clean Data">
+            <brief>
+                Cleans the data cache out to RAM. The start and end are relative to the page being serviced.
+            </brief>
+            <description>
+                <docref>See <autoref label="ch:vspace"/>.</docref>
+            </description>
+            <param dir="in" name="start_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page inclusive."/>
+            <param dir="in" name="end_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page exclusive."/>
+        </method>
+        <method id="ARMPageInvalidate_Data" name="Invalidate_Data" manual_name="Invalidate Data">
+            <brief>
+                Invalidates the cache range within the given page. The start and end are relative to the page being serviced 
+                and should be aligned to a cache line boundary where possible. 
+                An additional clean is performed on the outer cache lines if the start and end are 
+                not aligned, to clean out the bytes between the requested and the cache line boundary.
+            </brief>
+            <description>
+                <docref>See <autoref label="ch:vspace"/>.</docref>
+            </description>
+            <param dir="in" name="start_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page inclusive."/>
+            <param dir="in" name="end_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page exclusive."/>
+        </method>
+        <method id="ARMPageCleanInvalidate_Data" name="CleanInvalidate_Data"
+            manual_name="Clean and Invalidate Data">
+            <brief>
+                Clean and invalidates the cache range within the given page. The range will be flushed out to RAM. 
+                The start and end are relative to the page being serviced.
+            </brief>
+            <description>
+                <docref>See <autoref label="ch:vspace"/>.</docref>
+            </description>
+            <param dir="in" name="start_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page inclusive."/>
+            <param dir="in" name="end_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page exclusive."/>
+        </method>
+        <method id="ARMPageUnify_Instruction" name="Unify_Instruction" manual_name="Unify Instruction">
+            <brief>
+                Unify Instruction Cache. Cleans data lines to point of unification, invalidate 
+                corresponding instruction lines to point of unification, then invalidates branch
+                predictors. The start and end are relative to the page being
+                serviced.
+            </brief>
+            <description>
+                <docref>See <autoref label="ch:vspace"/>.</docref>
+            </description>
+            <param dir="in" name="start_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page inclusive."/>
+            <param dir="in" name="end_offset" type="seL4_Word"
+            description="The offset, relative to the start of the page exclusive."/>
+        </method>
+        <method id="ARMPageGetAddress" name="GetAddress" manual_name="Get Address">
+            <brief>
+                Get the physical address of the underlying frame.
+            </brief>
+            <description>
+                <docref>See <autoref label="ch:vspace"/>.</docref>
+            </description>
+            <return>
+                A <texttt text='seL4_ARM_Page_GetAddress_t'/> struct that contains a
+                <texttt text='seL4_Word paddr'/>, which holds the physical address of the page,
+                and <texttt text='int error'/>.<docref> See <autoref label='sec:errors'/> for a description
+                of the message register and tag contents upon error.</docref>
+            </return>
+            <param dir="out" name="paddr" type="seL4_Word"/>
+        </method>
+    </interface>
+    <interface name="seL4_ARM_ASIDControl" manual_name="ASID Control"
+        cap_description="The master ASIDControl capability being operated on.">
+        <method id="ARMASIDControlMakePool" name="MakePool" manual_name="Make Pool">
+            <brief>
+                Create an ASID Pool.
+            </brief>
+            <description>
+                Together with a capability to <texttt text="Untyped Memory"/>, which is passed as an argument,
+                create an <texttt text="ASID Pool"/>. The untyped capability must represent a
+                4K memory object. This will create an ASID pool with enough space for 1024 VSpaces.
+            </description>
+            <param dir="in" name="untyped" type="seL4_Untyped"
+            description="Capability to an untyped memory object that will become the pool. Must be 4K bytes."/>
+            <param dir="in" name="root" type="seL4_CNode"
+            description="CPTR to the CNode that forms the root of the destination CSpace. Must be at a depth equivalent to the wordsize."/>
+            <param dir="in" name="index" type="seL4_Word"
+            description="CPTR to the destination slot. Resolved from the root of the destination CSpace."/>
+            <param dir="in" name="depth" type="seL4_Uint8"
+            description="Number of bits of index to resolve to find the destination slot."/>
+        </method>
+    </interface>
+    <interface name="seL4_ARM_ASIDPool" manual_name="ASID Pool"
+        cap_description="The ASID pool which is being assigned to. Must not be full. Each ASID pool can contain 1024 entries.">
+        <method id="ARMASIDPoolAssign" name="Assign" manual_label="asidpool_assign"
+            manual_name="Asid Pool Assign">
+            <brief>
+                Assign an ASID Pool.
+            </brief>
+            <description>
+                Assigns an ASID to the VSpace passed in as an argument.
+            </description>
+            <param dir="in" name="vspace" type="seL4_CPtr"
+            description="The VSpace that is being assigned to an ASID pool. Must not already be assigned to an ASID pool."/>
+        </method>
+    </interface>
+    <interface name="seL4_ARM_VCPU" manual_name="VCPU"
+        cap_description="Capability to the VCPU being operated on.">
+        <method id="ARMVCPUSetTCB" name="SetTCB" condition="defined(CONFIG_ARM_HYPERVISOR_SUPPORT)"
+            manual_name="Set TCB">
+                <brief>
+                    Bind a TCB to a virtual CPU
+                </brief>
+             <description>
+                 There is a 1:1 relationship between a virtual CPU and a TCB. If either (or both) of them is
+                 associated with another one, they will be dissociated, and then associated to the
+                 ones called in this system calls.
+             </description>
+            <param dir="in" name="tcb" type="seL4_TCB"
+            description="Capability to TCB to bind to a virtual CPU"/>
+        </method>
+        <method id="ARMVCPUInjectIRQ" name="InjectIRQ" condition="defined(CONFIG_ARM_HYPERVISOR_SUPPORT)"
+            manual_name="Inject IRQ">
+                <brief>
+                    Inject an IRQ to a virtual CPU
+                </brief>
+            <param dir="in" name="virq" type="seL4_Uint16"
+            description="Virtual IRQ ID"/>
+            <param dir="in" name="priority" type="seL4_Uint8"
+            description="Priority of the IRQ to be injected"/>
+            <param dir="in" name="group" type="seL4_Uint8"
+            description="IRQ group"/>
+            <param dir="in" name="index" type="seL4_Uint8"
+            description="IRQ index"/>
+        </method>
+        <method id="ARMVCPUReadReg" name="ReadRegs" condition="defined(CONFIG_ARM_HYPERVISOR_SUPPORT)"
+            manual_name="Read Registers">
+                <brief>
+                    Read a virtual CPU register
+                </brief>
+            <param dir="in" name="field" type="seL4_Word"
+            description="Register to read from a VCPU"/>
+            <param dir="out" name="value" type="seL4_Word"
+            description="Returned value of the VCPU register"/>
+        </method>
+        <method id="ARMVCPUWriteReg" name="WriteRegs" condition="defined(CONFIG_ARM_HYPERVISOR_SUPPORT)"
+            manual_name="Write Registers">
+                <brief>
+                    Write a virtual CPU register
+                </brief>
+            <param dir="in" name="field" type="seL4_Word"
+            description="Register ID to write to a VCPU"/>
+            <param dir="in" name="value" type="seL4_Word"
+            description="Value to be written to the VCPU register"/>
+        </method>
+        <method id="ARMVCPUAckVPPI" name="AckVPPI" condition="defined(CONFIG_ARM_HYPERVISOR_SUPPORT)"
+            manual_name="Acknowledge Virtual PPI IRQ">
+                <brief>
+                    Acknowledge a PPI IRQ previously forwarded from a VPPIEvent fault
+                </brief>
+            <description>
+                Acknowledge and unmask the PPI interrupt so that further interrupts can be forwarded
+                through VPPIEvent faults.
+            </description>
+            <param dir="in" name="irq" type="seL4_Word"
+            description="irq to ack."/>
+
+        </method>
+    </interface>
+   <interface name="seL4_IRQControl" manual_name="IRQ Control" cap_description="An IRQControl capability. This gives you the authority to make this call.">
+
+       <method id="ARMIRQIssueIRQHandlerTrigger" name="GetTrigger" manual_name="GetTrigger"
+           manual_label="irq_controlgettrigger">
+            <brief>
+                Create an IRQ handler capability and specify the trigger method (edge or level).
+            </brief>
+            <description>
+                <docref>See <autoref label="sec:interrupts"/>.</docref>
+            </description>
+            <param dir="in" name="irq" type="seL4_Word" description="The IRQ that you want this capability to handle."/>
+
+            <param dir="in" name="trigger" type="seL4_Word" description="Indicates whether this IRQ is edge (1) or level (0) triggered."/>
+            <param dir="in" name="root" type="seL4_CNode" description="CPTR to the CNode that forms the root of the destination CSpace. Must be at a depth equivalent to the wordsize."/>
+            <param dir="in" name="index" type="seL4_Word" description="CPTR to the destination slot. Resolved from the root of the destination CSpace."/>
+            <param dir="in" name="depth" type="seL4_Uint8" description="Number of bits of dest_index to resolve to find the destination slot."/>
+        </method>
+
+       <method id="ARMIRQIssueIRQHandlerTriggerCore" name="GetTriggerCore" manual_name="GetTriggerCore"
+           manual_label="irq_controlgettriggercore" condition="CONFIG_MAX_NUM_NODES > 1">
+            <brief>
+                Create an IRQ handler capability and specify the trigger method (edge or level) and the target core.
+            </brief>
+            <description>
+                <docref>See <autoref label="sec:interrupts"/>.</docref>
+            </description>
+            <param dir="in" name="irq" type="seL4_Word" description="The IRQ that you want this capability to handle."/>
+
+            <param dir="in" name="trigger" type="seL4_Word" description="Indicates whether this IRQ is edge (1) or level (0) triggered."/>
+            <param dir="in" name="root" type="seL4_CNode" description="CPTR to the CNode that forms the root of the destination CSpace. Must be at a depth equivalent to the wordsize."/>
+            <param dir="in" name="index" type="seL4_Word" description="CPTR to the destination slot. Resolved from the root of the destination CSpace."/>
+            <param dir="in" name="depth" type="seL4_Uint8" description="Number of bits of dest_index to resolve to find the destination slot."/>
+            <param dir="in" name="target" type="seL4_Word" description="Indicates the target core ID to which this irq will be sent."/>
+        </method>
+
+    </interface>
+</api>

@@ -1,0 +1,89 @@
+// DeviceTree for the Sparrow SMC
+//
+// This is a nearly-minimal skeleton that still manages to boot seL4 in renode.
+// It is intended to migrate piece-by-piece to the actual values, beginning
+// with:
+//   1) OpenTitan PLIC to be implemented in seL4 / bbl / elfloader
+//   2) OpenTitan UART driver to be implemented in seL4 / bbl / elfloader
+//   3) OpenTitan timer driver...
+//
+// For now build manually with:
+//
+//   dtc -I dts -O dtb sim/config/devicetree/sparrow.dts > sim/config/devicetree/sparrow.dtb
+//
+// Note: When changing this, it's easy to cause a bbl panic. When debugging
+// those, it can help to have symbols in the bbl image, but seL4 builds it
+// using a CMake custom command that has not exposed CFLAGS. Workaround:
+//
+//   cd out/kata/bbl; make clean; CFLAGS=-ggdb make
+
+/dts-v1/;
+
+/ {
+  #address-cells = <1>;
+  #size-cells = <1>;
+  compatible = "google,sparrow0";
+  model = "google,sparrow0";
+
+  chosen {
+  };
+
+  cpus {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    cpu0: cpu@0 {
+      device_type = "cpu";
+      reg = <0>;
+      compatible = "riscv";
+      riscv,isa = "rv32imac";
+      mmu-type = "riscv,sv39";
+      status = "okay";
+
+      cpu0_intc: interrupt-controller {
+        #interrupt-cells = <1>;
+        compatible = "riscv,cpu-intc";
+        interrupt-controller;
+        phandle = <0x0f>;
+      };
+    };
+  };
+
+  memory@28000000 {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    device_type = "memory";
+    // TODO: sparrow_top says
+    // reg = <0x28000000 0x400000>;
+    // Shrink seL4 and possibly also elfloader.
+    reg = <0x28000000 0x1000000>;
+  };
+
+  soc {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    compatible = "simple-bus";
+    ranges;
+    clint0: interrupt-controller@2000000 {
+      #interrupt-cells = <1>;
+      compatible = "riscv,clint0";
+      reg = <0x2000000 0x10000>;
+      interrupt-controller;
+      interrupts-extended = <&cpu0_intc 3 &cpu0_intc 7>;
+    };
+    plic0: interrupt-controller@c000000 {
+      #interrupt-cells = <1>;
+      compatible = "riscv,plic0";
+      reg = <0xc000000 0x4000000>;
+      interrupt-controller;
+      interrupts-extended = <&cpu0_intc 11>;
+      riscv,ndev = <0x34>;
+      riscv,max-priority = <0x07>;
+    };
+    uart0: serial@10000000 {
+      compatible = "ns16550a";
+      interrupt-parent = <&plic0>;
+      reg = <0x10000000 0x18>;
+      label = "uart0";
+    };
+  };
+};
