@@ -66,6 +66,9 @@ add_sources(
         idle.c
         api/faults.c
         api/benchmark.c
+        kernel/machine_isr.c
+        kernel/machine_uart.c
+        kernel/preboot.c
         kernel/boot.c
         kernel/thread.c
         kernel/vspace.c

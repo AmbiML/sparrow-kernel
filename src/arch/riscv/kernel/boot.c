@@ -404,7 +404,7 @@ static BOOT_CODE bool_t try_init_kernel(
     return true;
 }
 
-BOOT_CODE VISIBLE void init_kernel(
+NORETURN BOOT_CODE VISIBLE void init_kernel(
     paddr_t ui_p_reg_start,
     paddr_t ui_p_reg_end,
     sword_t pv_offset,
@@ -418,6 +418,10 @@ BOOT_CODE VISIBLE void init_kernel(
 #endif
 )
 {
+    printf("\n");
+    printf("----------\n");
+    printf("init_kernel()\n");
+
     bool_t result;
     paddr_t dtb_end_p = 0;
 
@@ -456,4 +460,9 @@ BOOT_CODE VISIBLE void init_kernel(
 
     schedule();
     activateThread();
+
+  // Kernel initialization is done, this initial thread now becomes the first
+  // user thread. The code in preboot.c does _not_ handle this as we now mret
+  // directly to init_kernel, so we've moved it here.
+  restore_user_context();
 }
