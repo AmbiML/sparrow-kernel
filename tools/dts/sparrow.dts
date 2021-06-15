@@ -55,7 +55,7 @@
     // TODO: sparrow_top says
     // reg = <0x28000000 0x400000>;
     // Shrink seL4 and possibly also elfloader.
-    reg = <0x28000000 0x1000000>;
+    reg = <0x28000000 0x4000000>;
   };
 
   soc {
