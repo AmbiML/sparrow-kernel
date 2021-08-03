@@ -237,6 +237,13 @@ devices:
       - index: 0
         kernel: PLIC_PPTR
 
+  # OpenTitan PLIC
+  - compatible:
+      - lowrisc,plic
+    regions:
+      - index: 0
+        kernel: PLIC_PPTR
+
   # elfloader rules
   - compatible:
       - arm,psci-0.2

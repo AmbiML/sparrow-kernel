@@ -26,6 +26,8 @@
   model = "google,sparrow0";
 
   chosen {
+    // seL4 requires including devices that it should memory map here.
+    seL4,kernel-devices = &{/soc/interrupt-controller@41010000};
   };
 
   cpus {
@@ -52,7 +54,7 @@
     #address-cells = <1>;
     #size-cells = <1>;
     device_type = "memory";
-    // TODO: sparrow_top says
+    // TODO(mattharvey): sparrow_top says
     // reg = <0x28000000 0x400000>;
     // Shrink seL4 and possibly also elfloader.
     reg = <0x28000000 0x4000000>;
@@ -63,20 +65,17 @@
     #size-cells = <1>;
     compatible = "simple-bus";
     ranges;
-    clint0: interrupt-controller@2000000 {
+    plic0: interrupt-controller@41010000 {
       #interrupt-cells = <1>;
-      compatible = "riscv,clint0";
-      reg = <0x2000000 0x10000>;
-      interrupt-controller;
-      interrupts-extended = <&cpu0_intc 3 &cpu0_intc 7>;
-    };
-    plic0: interrupt-controller@c000000 {
-      #interrupt-cells = <1>;
-      compatible = "riscv,plic0";
-      reg = <0xc000000 0x4000000>;
+      compatible = "lowrisc,plic";
+      reg = <0x41010000 0x110>;
       interrupt-controller;
       interrupts-extended = <&cpu0_intc 11>;
-      riscv,ndev = <0x34>;
+      // TODO(mattharvey): regtool is currently only generating 32, but the
+      // real PLIC will support more sources. Determine long-term plan for
+      // source control of .hjson and make it reflect the correct number of
+      // sources. Also update "reg =" above, since the range will grow.
+      riscv,ndev = <0x96>;
       riscv,max-priority = <0x07>;
     };
     uart0: serial@10000000 {
