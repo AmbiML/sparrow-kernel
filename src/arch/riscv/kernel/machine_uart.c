@@ -8,24 +8,55 @@
 
 // Machine-mode uart putchar + trivial printf for debugging.
 
+#define UART0_BASE_ADDR 0x40030000
+
+// Register definitions copied from opentitan/uart.h
+//
+// Copy/paste instead of include is to avoid adding includes to seL4 kernel
+// build rules.
+#define UART_FIFO_CTRL(id) (UART##id##_BASE_ADDR + 0x1c)
+#define UART_FIFO_CTRL_RXRST 0
+#define UART_FIFO_CTRL_TXRST 1
+
+#define UART_CTRL(id) (UART##id##_BASE_ADDR + 0xc)
+#define UART_CTRL_TX 0
+#define UART_CTRL_RX 1
+#define UART_CTRL_NCO_MASK 0xffff
+#define UART_CTRL_NCO_OFFSET 16
+
+#define UART_STATUS(id) (UART##id##_BASE_ADDR + 0x10)
+#define UART_STATUS_TXFULL 0
+
+#define UART_WDATA(id) (UART##id##_BASE_ADDR + 0x18)
+#define UART_WDATA_REG_OFFSET 0x18
+#define UART_WDATA_WDATA_MASK 0xff
+#define UART_WDATA_WDATA_OFFSET 0
+
+// Accessor for 32-bit hardware registers
+#define REG32(name) *((volatile uint32_t *)(name))
+
+#define MASK_AND_OFFSET(value, regname) \
+  ((value & UART_##regname##_MASK) << UART_##regname##_OFFSET)
+
+#define MACHINE_UART_BAUD 115200ull
+#define MACHINE_UART_CLK_HZ (48ull * 1000 * 1000)
+
 void machine_init_uart(void) {
-  volatile uint8_t *const uart16550 = (uint8_t *)0x40030000;
-  uart16550[1] = 0x00; // Disable all interrupts
-  uart16550[3] = 0x80; // Enable DLAB (set baud rate divisor)
-  uart16550[0] = 0x03; // Set divisor to 3 (lo byte) 38400 baud
-  uart16550[1] = 0x00; //                  (hi byte)
-  uart16550[3] = 0x03; // 8 bits, no parity, one stop bit
-  uart16550[2] = 0xC7; // Enable FIFO, clear them, with 14-byte threshold
+  uint64_t ctrl_nco = ((uint64_t)MACHINE_UART_BAUD << 20) / MACHINE_UART_CLK_HZ;
+
+  // Enables TX and RX and sets baud.
+  REG32(UART_CTRL(0)) = (1 << UART_CTRL_TX) | (1 << UART_CTRL_RX) |
+                        MASK_AND_OFFSET(ctrl_nco, CTRL_NCO);
+
+  // Resets TX and RX FIFOs.
+  REG32(UART_FIFO_CTRL(0)) =
+      (1 << UART_FIFO_CTRL_RXRST) | (1 << UART_FIFO_CTRL_TXRST);
 }
 
 void machine_putchar(char c) {
-  volatile uint8_t *uart16550 = (uint8_t *)0x40030000;
-  const int UART_REG_QUEUE = 0;
-  const int UART_REG_LINESTAT = 5;
-  const int UART_REG_STATUS_TX = 0x20;
-  while ((uart16550[UART_REG_LINESTAT] & UART_REG_STATUS_TX) == 0) {
-  };
-  uart16550[UART_REG_QUEUE] = c;
+  while ((REG32(UART_STATUS(0)) & (1 << UART_STATUS_TXFULL)) != 0) {
+  }
+  REG32(UART_WDATA(0)) = MASK_AND_OFFSET(c, WDATA_WDATA);
 }
 
 // only prints 32-bit "%x" hex values
