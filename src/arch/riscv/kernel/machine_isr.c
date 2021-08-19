@@ -17,25 +17,26 @@ uint32_t machine_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
 // SBI_CONSOLE_PUTCHAR. More functionality can be added as needed.
 
 __attribute__((naked, aligned(4))) void machine_vector_table() {
-  asm volatile(".option push       \n"
-               ".option norvc      \n"
-               "j machine_isr_wrapper \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               "j machine_bad_isr      \n"
-               ".option pop        \n");
+  asm volatile(
+      ".option push       \n"
+      ".option norvc      \n"
+      "j machine_isr_wrapper \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      "j machine_bad_isr      \n"
+      ".option pop        \n");
 }
 
 // We could potentially remove a bunch of this reg saving/loading, but it gets
@@ -43,82 +44,83 @@ __attribute__((naked, aligned(4))) void machine_vector_table() {
 
 void machine_isr_wrapper(void);
 __attribute__((naked)) void machine_isr_wrapper() {
-  asm volatile("csrrw sp, mscratch, sp  \n"
+  asm volatile(
+      "csrrw sp, mscratch, sp  \n"
 
-               "sw x0,   0*4(sp)        \n"
-               "sw x1,   1*4(sp)        \n"
-               "sw x2,   2*4(sp)        \n"
-               "sw x3,   3*4(sp)        \n"
-               "sw x4,   4*4(sp)        \n"
-               "sw x5,   5*4(sp)        \n"
-               "sw x6,   6*4(sp)        \n"
-               "sw x7,   7*4(sp)        \n"
-               "sw x8,   8*4(sp)        \n"
-               "sw x9,   9*4(sp)        \n"
-               "sw x10, 10*4(sp)        \n"
-               "sw x11, 11*4(sp)        \n"
-               "sw x12, 12*4(sp)        \n"
-               "sw x13, 13*4(sp)        \n"
-               "sw x14, 14*4(sp)        \n"
-               "sw x15, 15*4(sp)        \n"
-               "sw x16, 16*4(sp)        \n"
-               "sw x17, 17*4(sp)        \n"
-               "sw x18, 18*4(sp)        \n"
-               "sw x19, 19*4(sp)        \n"
-               "sw x20, 20*4(sp)        \n"
-               "sw x21, 21*4(sp)        \n"
-               "sw x22, 22*4(sp)        \n"
-               "sw x23, 23*4(sp)        \n"
-               "sw x24, 24*4(sp)        \n"
-               "sw x25, 25*4(sp)        \n"
-               "sw x26, 26*4(sp)        \n"
-               "sw x27, 27*4(sp)        \n"
-               "sw x28, 28*4(sp)        \n"
-               "sw x29, 29*4(sp)        \n"
-               "sw x30, 30*4(sp)        \n"
-               "sw x31, 31*4(sp)        \n"
+      "sw x0,   0*4(sp)        \n"
+      "sw x1,   1*4(sp)        \n"
+      "sw x2,   2*4(sp)        \n"
+      "sw x3,   3*4(sp)        \n"
+      "sw x4,   4*4(sp)        \n"
+      "sw x5,   5*4(sp)        \n"
+      "sw x6,   6*4(sp)        \n"
+      "sw x7,   7*4(sp)        \n"
+      "sw x8,   8*4(sp)        \n"
+      "sw x9,   9*4(sp)        \n"
+      "sw x10, 10*4(sp)        \n"
+      "sw x11, 11*4(sp)        \n"
+      "sw x12, 12*4(sp)        \n"
+      "sw x13, 13*4(sp)        \n"
+      "sw x14, 14*4(sp)        \n"
+      "sw x15, 15*4(sp)        \n"
+      "sw x16, 16*4(sp)        \n"
+      "sw x17, 17*4(sp)        \n"
+      "sw x18, 18*4(sp)        \n"
+      "sw x19, 19*4(sp)        \n"
+      "sw x20, 20*4(sp)        \n"
+      "sw x21, 21*4(sp)        \n"
+      "sw x22, 22*4(sp)        \n"
+      "sw x23, 23*4(sp)        \n"
+      "sw x24, 24*4(sp)        \n"
+      "sw x25, 25*4(sp)        \n"
+      "sw x26, 26*4(sp)        \n"
+      "sw x27, 27*4(sp)        \n"
+      "sw x28, 28*4(sp)        \n"
+      "sw x29, 29*4(sp)        \n"
+      "sw x30, 30*4(sp)        \n"
+      "sw x31, 31*4(sp)        \n"
 
-               "csrr t0, mepc           \n"
-               "addi t0, t0, 4          \n"
-               "csrw mepc, t0           \n"
-               "jal machine_isr            \n"
+      "csrr t0, mepc           \n"
+      "addi t0, t0, 4          \n"
+      "csrw mepc, t0           \n"
+      "jal machine_isr            \n"
 
-               "lw x0,   0*4(sp)        \n"
-               "lw x1,   1*4(sp)        \n"
-               "lw x2,   2*4(sp)        \n"
-               "lw x3,   3*4(sp)        \n"
-               "lw x4,   4*4(sp)        \n"
-               "lw x5,   5*4(sp)        \n"
-               "lw x6,   6*4(sp)        \n"
-               "lw x7,   7*4(sp)        \n"
-               "lw x8,   8*4(sp)        \n"
-               "lw x9,   9*4(sp)        \n"
-               //"lw x10, 10*4(sp)        \n" // Do not reload x10 (aka a0), as
-               // it contains the isr return value
-               "lw x11, 11*4(sp)        \n"
-               "lw x12, 12*4(sp)        \n"
-               "lw x13, 13*4(sp)        \n"
-               "lw x14, 14*4(sp)        \n"
-               "lw x15, 15*4(sp)        \n"
-               "lw x16, 16*4(sp)        \n"
-               "lw x17, 17*4(sp)        \n"
-               "lw x18, 18*4(sp)        \n"
-               "lw x19, 19*4(sp)        \n"
-               "lw x20, 20*4(sp)        \n"
-               "lw x21, 21*4(sp)        \n"
-               "lw x22, 22*4(sp)        \n"
-               "lw x23, 23*4(sp)        \n"
-               "lw x24, 24*4(sp)        \n"
-               "lw x25, 25*4(sp)        \n"
-               "lw x26, 26*4(sp)        \n"
-               "lw x27, 27*4(sp)        \n"
-               "lw x28, 28*4(sp)        \n"
-               "lw x29, 29*4(sp)        \n"
-               "lw x30, 30*4(sp)        \n"
-               "lw x31, 31*4(sp)        \n"
+      "lw x0,   0*4(sp)        \n"
+      "lw x1,   1*4(sp)        \n"
+      "lw x2,   2*4(sp)        \n"
+      "lw x3,   3*4(sp)        \n"
+      "lw x4,   4*4(sp)        \n"
+      "lw x5,   5*4(sp)        \n"
+      "lw x6,   6*4(sp)        \n"
+      "lw x7,   7*4(sp)        \n"
+      "lw x8,   8*4(sp)        \n"
+      "lw x9,   9*4(sp)        \n"
+      //"lw x10, 10*4(sp)        \n" // Do not reload x10 (aka a0), as
+      // it contains the isr return value
+      "lw x11, 11*4(sp)        \n"
+      "lw x12, 12*4(sp)        \n"
+      "lw x13, 13*4(sp)        \n"
+      "lw x14, 14*4(sp)        \n"
+      "lw x15, 15*4(sp)        \n"
+      "lw x16, 16*4(sp)        \n"
+      "lw x17, 17*4(sp)        \n"
+      "lw x18, 18*4(sp)        \n"
+      "lw x19, 19*4(sp)        \n"
+      "lw x20, 20*4(sp)        \n"
+      "lw x21, 21*4(sp)        \n"
+      "lw x22, 22*4(sp)        \n"
+      "lw x23, 23*4(sp)        \n"
+      "lw x24, 24*4(sp)        \n"
+      "lw x25, 25*4(sp)        \n"
+      "lw x26, 26*4(sp)        \n"
+      "lw x27, 27*4(sp)        \n"
+      "lw x28, 28*4(sp)        \n"
+      "lw x29, 29*4(sp)        \n"
+      "lw x30, 30*4(sp)        \n"
+      "lw x31, 31*4(sp)        \n"
 
-               "csrrw sp, mscratch, sp  \n"
-               "mret                    \n");
+      "csrrw sp, mscratch, sp  \n"
+      "mret                    \n");
 }
 
 uint32_t machine_bad_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
@@ -137,18 +139,29 @@ uint32_t machine_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
     return -ENOSYS;
   }
 
-  if (a7 == 0) {
-    // SBI_SET_TIMER
-    asm volatile("csrrc x0, mip, %0" ::"rK"(1 << 5));
-    asm volatile("csrrs x0, mie, %0" ::"rK"(1 << 7));
-    return 0;
-  } else if (a7 == 1) {
-    // SBI_CONSOLE_PUTCHAR
-    machine_putchar((uint8_t)a0);
-    return 0;
+  if (mcause == 9) {
+    if (a7 == 0) {
+      // SBI_SET_TIMER
+      asm volatile("csrrc x0, mip, %0" ::"rK"(1 << 5));
+      asm volatile("csrrs x0, mie, %0" ::"rK"(1 << 7));
+      return 0;
+    } else if (a7 == 1) {
+      // SBI_CONSOLE_PUTCHAR
+      machine_putchar((uint8_t)a0);
+      return 0;
+    } else if (a7 == 8) {
+      // SBI_SHUTDOWN
+      machine_printf("machine_isr sbi shutdown\n");
+      while (1) {
+      }
+      return -ENOSYS;
+    } else {
+      machine_assert(false, "machine_isr bad sbi call\n");
+      return -ENOSYS;
+    }
   } else {
-    machine_assert(false, "machine_isr bad sbi call\n");
-    return -ENOSYS;
+    machine_printf("mcause == %x\n", mcause);
+    machine_assert(false, "machine_isr unhandled mcause\n");
   }
 
   return 0;
