@@ -9,8 +9,11 @@ if(KernelPlatformSparrow)
     list(APPEND KernelDTSList "tools/dts/sparrow.dts")
     include_directories("${CMAKE_BINARY_DIR}/opentitan-gen/include")
     declare_default_headers(
-        TIMER_FREQUENCY 10000000llu PLIC_MAX_NUM_INT 96
+        TIMER drivers/timer/lowrisc.h
+        TIMER_FREQUENCY 24000000
+
         INTERRUPT_CONTROLLER drivers/irq/lowrisc.h
+        PLIC_MAX_NUM_INT 96
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)

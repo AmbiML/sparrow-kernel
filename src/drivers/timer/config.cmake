@@ -62,6 +62,11 @@ register_driver(
     PREFIX src/drivers/timer
     CFILES "allwinner-timer.c"
 )
+register_driver(
+    compatibility_strings "lowrisc,timer"
+    PREFIX src/drivers/timer
+    CFILES "lowrisc.c"
+)
 
 set(KernelArmHaveGenericTimer OFF)
 
