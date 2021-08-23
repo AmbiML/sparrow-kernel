@@ -179,6 +179,13 @@ devices:
         kernel: TIMER_PPTR
     interrupts:
       KERNEL_TIMER_IRQ: 0
+  # OpenTitan timer
+  - compatible:
+      - lowrisc,timer
+    regions:
+      - index: 0
+        kernel: TIMER_PPTR
+    # (KERNEL_TIMER_IRQ is defined in seL4/src/arch/riscv/platform_gen.h.in)
   # QCOM Krait timer (timer/qcom,msm-timer.txt)
   - compatible:
       - qcom,kpss-timer
@@ -236,7 +243,6 @@ devices:
     regions:
       - index: 0
         kernel: PLIC_PPTR
-
   # OpenTitan PLIC
   - compatible:
       - lowrisc,plic

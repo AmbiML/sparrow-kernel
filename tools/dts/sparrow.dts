@@ -1,21 +1,4 @@
 // DeviceTree for the Sparrow SMC
-//
-// This is a nearly-minimal skeleton that still manages to boot seL4 in renode.
-// It is intended to migrate piece-by-piece to the actual values, beginning
-// with:
-//   1) OpenTitan PLIC to be implemented in seL4 / bbl / elfloader
-//   2) OpenTitan UART driver to be implemented in seL4 / bbl / elfloader
-//   3) OpenTitan timer driver...
-//
-// For now build manually with:
-//
-//   dtc -I dts -O dtb sim/config/devicetree/sparrow.dts > sim/config/devicetree/sparrow.dtb
-//
-// Note: When changing this, it's easy to cause a bbl panic. When debugging
-// those, it can help to have symbols in the bbl image, but seL4 builds it
-// using a CMake custom command that has not exposed CFLAGS. Workaround:
-//
-//   cd out/kata/bbl; make clean; CFLAGS=-ggdb make
 
 /dts-v1/;
 
@@ -27,7 +10,33 @@
 
   chosen {
     // seL4 requires including devices that it should memory map here.
-    seL4,kernel-devices = &{/soc/interrupt-controller@41010000};
+    seL4,kernel-devices =
+        // TODO(mattharvey): Fix or work around an overflow of virtual
+        // addresses in seL4/tools.
+        //
+        // It seems likely this is a bug in seL4, but I haven't yet fully
+        // understood the intended design of the riscv32-specific version of
+        // the seL4 page table.
+        //
+        // The code generation c_header.py for devices_gen.h creates physical
+        // addresses at (KDEV_BASE + n * 0x400000), consistent with the 4MB
+        // increments of map_kernel_frame on riscv32. While multiple devices
+        // in the same 4MB physical block do get to share a frame, once they
+        // aren't in the same 4MB block, we get a device with n > 1, causing
+        // an overflow because KDEV_BASE is hard-coded to 0xffc00000 in the
+        // riscv32 hardware.h.
+        //
+        // Until this is fixed, uncommenting the timer line below will generate
+        // one of TIMER_PPTR or PLIC_PPTR where driver code using proper
+        // offsets will step on user memory, resulting in a store/load AMO
+        // exception.
+        //
+        // A workaround is to change the memory layout so that these two
+        // peripherals lie in the same 4MB block, but the OS probably should
+        // not impose that kind of constraint.
+
+        // &{/soc/timer@40100000},
+        &{/soc/interrupt-controller@41010000};
   };
 
   cpus {
@@ -54,9 +63,8 @@
     #address-cells = <1>;
     #size-cells = <1>;
     device_type = "memory";
-    // TODO(mattharvey): sparrow_top says
-    // reg = <0x28000000 0x400000>;
-    // Shrink seL4 and possibly also elfloader.
+    // TODO(mattharvey): Change the size to 0x400000 after the system is made
+    // small enough to fit.
     reg = <0x28000000 0x4000000>;
   };
 
@@ -65,24 +73,32 @@
     #size-cells = <1>;
     compatible = "simple-bus";
     ranges;
+    timer@40100000 {
+      compatible = "lowrisc,timer";
+      clock-frequency = < 24000000 >;
+      reg = < 0x40100000 0x1000 >;
+      interrupt-parent = <&cpu0_intc>;
+      interrupts = <5>, <7>;
+      interrupts-extended = <&cpu0_intc 5>, <&cpu0_intc 7>;
+    };
     plic0: interrupt-controller@41010000 {
       #interrupt-cells = <1>;
       compatible = "lowrisc,plic";
-      reg = <0x41010000 0x110>;
+      reg = <0x41010000 0x1000>;
       interrupt-controller;
-      interrupts-extended = <&cpu0_intc 11>;
-      // TODO(mattharvey): regtool is currently only generating 32, but the
-      // real PLIC will support more sources. Determine long-term plan for
-      // source control of .hjson and make it reflect the correct number of
-      // sources. Also update "reg =" above, since the range will grow.
-      riscv,ndev = <0x96>;
+      interrupt-parent = <&cpu0_intc>;
+      interrupts = <9>, <11>;
+      interrupts-extended = <&cpu0_intc 9>, <&cpu0_intc 11>;
+      riscv,ndev = <96>;
       riscv,max-priority = <0x07>;
     };
-    uart0: serial@10000000 {
-      compatible = "ns16550a";
+    uart0: serial@40030000 {
+      compatible = "lowrisc,uart";
+      reg = <0x40030000 0x1000>;
       interrupt-parent = <&plic0>;
-      reg = <0x10000000 0x18>;
-      label = "uart0";
+      interrupts = <25>, <26>, <27>, <28>, <29>, <30>, <31>, <32>;
+      interrupts-extended = <&plic0 25>, <&plic0 26>, <&plic0 27>,
+          <&plic0 28>, <&plic0 29>, <&plic0 30>, <&plic0 31>, <&plic0 32>;
     };
   };
 };
