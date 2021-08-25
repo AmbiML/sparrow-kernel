@@ -63,7 +63,7 @@
     #address-cells = <1>;
     #size-cells = <1>;
     device_type = "memory";
-    // TODO(mattharvey): Change the size to 0x400000 after the system is made
+    // TODO(b/197745020): Change the size to 0x400000 after the system is made
     // small enough to fit.
     reg = <0x28000000 0x4000000>;
   };
