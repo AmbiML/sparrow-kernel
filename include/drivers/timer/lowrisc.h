@@ -14,8 +14,9 @@
 #pragma once
 
 #include <config.h>
-#include <machine/timer.h>
+#include <mode/util.h>
 #include <stdint.h>
+#include <types.h>
 
 #include "opentitan/timer.h"
 
@@ -23,9 +24,19 @@
 // device tree used at build time.
 #define RV_TIMER_BASE ((uint32_t)TIMER_PPTR)
 
-// The prescaler and step will be set so that, in each second, the counter
+// The prescaler and step will be set so that, in each microsecond, the counter
 // increases by this number.
-#define RV_TIMER_COUNTER_FREQUENCY 1000
+//
+// Be careful when trying settings more than 1. seL4 commit
+// dc959bad4d6dc9956e19a5aff25d9f7bf2958162 does
+//
+// #define MAX_PERIOD_US (getMaxUsToTicks() / 8)
+//
+// where they probably meant getMaxTicksToUs. A large number of ticks / us can
+// cause an integer overflow in MAX_RELEASE_TIME.
+#define RV_TIMER_TICKS_PER_US 1
+#define RV_TIMER_US_PER_MS 1000
+#define RV_TIMER_MS_PER_S 1000
 
 // Offset between hart-specific registers of consecutive
 #define RV_TIMER_HART_SPACING 0x100
@@ -56,6 +67,26 @@
 
 // All definitions below are for signatures that make up the general seL4 timer
 // interface.
+
+static inline CONST time_t getKernelWcetUs(void) { return 10u; }
+
+static inline PURE time_t ticksToUs(ticks_t ticks) {
+  return div64(ticks, RV_TIMER_TICKS_PER_US);
+}
+
+static inline PURE ticks_t usToTicks(time_t us) {
+  return us * RV_TIMER_TICKS_PER_US;
+}
+
+static inline PURE ticks_t getTimerPrecision(void) { return 1; }
+
+static inline CONST ticks_t getMaxTicksToUs(void) {
+  return div64(UINT64_MAX, RV_TIMER_TICKS_PER_US);
+}
+
+static inline PURE time_t getMaxUsToTicks(void) {
+  return usToTicks(getMaxTicksToUs());
+}
 
 static inline ticks_t getCurrentTime(void) {
   while (true) {
@@ -91,8 +122,9 @@ static inline void ackDeadlineIRQ(void) {
 static inline void resetTimer(void) {
   uint64_t target;
   do {
-    target = getCurrentTime() +
-             CONFIG_TIMER_TICK_MS * RV_TIMER_COUNTER_FREQUENCY / 1000;
+    ackDeadlineIRQ();
+    target = getCurrentTime() + (CONFIG_TIMER_TICK_MS * RV_TIMER_US_PER_MS *
+                                 RV_TIMER_TICKS_PER_US);
     setDeadline(target);
   } while (getCurrentTime() > target);
 }

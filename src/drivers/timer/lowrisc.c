@@ -44,10 +44,11 @@ BOOT_CODE void initTimer(void) {
 
   // Set the prescale and step.
   const uint64_t clock_freq = TIMER_CLOCK_HZ;
-  const uint64_t counter_freq = RV_TIMER_COUNTER_FREQUENCY;
+  const uint64_t counter_freq =
+      (RV_TIMER_TICKS_PER_US * RV_TIMER_US_PER_MS * RV_TIMER_MS_PER_S);
   const uint64_t gcd = euclidean_gcd(clock_freq, counter_freq);
-  const uint64_t prescale = clock_freq / gcd - 1;
-  const uint64_t step = counter_freq / gcd;
+  const uint64_t prescale = div64(clock_freq, gcd) - 1;
+  const uint64_t step = div64(counter_freq, gcd);
   RV_TIMER_HART_REG(RV_TIMER_CFG0_REG_OFFSET) =
       (((prescale & RV_TIMER_CFG0_PRESCALE_MASK)
         << RV_TIMER_CFG0_PRESCALE_OFFSET) |
@@ -58,4 +59,9 @@ BOOT_CODE void initTimer(void) {
 
   // Set enabled for seL4's hart.
   RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET) = hart_bit;
+
+  // CONFIG_TIMER_TICK_MS is only defined in non-MCS.
+#ifndef CONFIG_KERNEL_MCS
+  resetTimer();
+#endif /* !CONFIG_KERNEL_MCS */
 }
