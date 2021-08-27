@@ -7,9 +7,7 @@
 
 #pragma once
 
-#ifdef HAVE_AUTOCONF
 #include <autoconf.h>
-#endif
 
 #define seL4_WordBits           64
 /* log 2 bits in a word */
@@ -128,3 +126,8 @@ typedef enum {
 
 /* First address in the virtual address space that is not accessible to user level */
 #define seL4_UserTop 0x0000003ffffff000
+
+#ifdef CONFIG_ENABLE_BENCHMARKS
+/* size of kernel log buffer in bytes */
+#define seL4_LogBufferSize (LIBSEL4_BIT(20))
+#endif /* CONFIG_ENABLE_BENCHMARKS */

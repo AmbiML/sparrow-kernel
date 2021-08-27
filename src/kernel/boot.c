@@ -18,10 +18,10 @@
 #include <util.h>
 
 /* (node-local) state accessed only during bootstrapping */
-ndks_boot_t ndks_boot BOOT_DATA;
+BOOT_BSS ndks_boot_t ndks_boot;
 
-rootserver_mem_t rootserver BOOT_DATA;
-static region_t rootserver_mem BOOT_DATA;
+BOOT_BSS rootserver_mem_t rootserver;
+BOOT_BSS static region_t rootserver_mem;
 
 BOOT_CODE static void merge_regions(void)
 {
@@ -685,7 +685,7 @@ BOOT_CODE void bi_finalise(void)
     };
 }
 
-static inline pptr_t ceiling_kernel_window(pptr_t p)
+BOOT_CODE static inline pptr_t ceiling_kernel_window(pptr_t p)
 {
     /* Adjust address if it exceeds the kernel window
      * Note that we compare physical address in case of overflow.
@@ -696,9 +696,9 @@ static inline pptr_t ceiling_kernel_window(pptr_t p)
     return p;
 }
 
-/* we can't delcare arrays on the stack, so this is space for
- * the below function to use. */
-static BOOT_DATA region_t avail_reg[MAX_NUM_FREEMEM_REG];
+/* we can't declare arrays on the stack, so this is space for
+ * the function below to use. */
+BOOT_BSS static region_t avail_reg[MAX_NUM_FREEMEM_REG];
 /**
  * Dynamically initialise the available memory on the platform.
  * A region represents an area of memory.
@@ -708,16 +708,25 @@ BOOT_CODE void init_freemem(word_t n_available, const p_region_t *available,
                             v_region_t it_v_reg, word_t extra_bi_size_bits)
 {
     /* Force ordering and exclusivity of reserved regions */
-    for (word_t i = 0; n_reserved > 0 && i < n_reserved - 1; i++) {
-        assert(reserved[i].start <= reserved[i].end);
-        assert(reserved[i].end <= reserved[i + 1].start);
+    for (word_t i = 0; i < n_reserved; i++) {
+        UNUSED region_t *r = &reserved[i];
+        /* Reserved regions must be sane, the size is allowed to be zero */
+        assert(r->start <= r->end);
+        if (i > 0) {
+            /* regions must be ordered and must not overlap */
+            assert(r->start >= reserved[i - 1].end);
+        }
     }
 
     /* Force ordering and exclusivity of available regions */
-    assert(n_available > 0);
-    for (word_t i = 0; i < n_available - 1; i++) {
-        assert(available[i].start < available[i].end);
-        assert(available[i].end <= available[i + 1].start);
+    for (word_t i = 0; i < n_available; i++) {
+        UNUSED const p_region_t *r = &available[i];
+        /* Available regions must be sane and have a size greater zero */
+        assert(r->start < r->end);
+        if (i > 0) {
+            /* regions must be ordered and must not overlap */
+            assert(r->start >= available[i - 1].end);
+        }
     }
 
     for (word_t i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
@@ -791,7 +800,7 @@ BOOT_CODE void init_freemem(word_t n_available, const p_region_t *available,
     /* now try to fit the root server objects into a region */
     word_t i = MAX_NUM_FREEMEM_REG - 1;
     if (!is_reg_empty(ndks_boot.freemem[i])) {
-        printf("Insufficient MAX_NUM_FREEMEM_REG");
+        printf("Insufficient MAX_NUM_FREEMEM_REG\n");
         halt();
     }
     /* skip any empty regions */

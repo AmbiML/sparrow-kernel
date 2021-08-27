@@ -33,11 +33,20 @@
  * at least this much budget - see comment on refill_sufficient */
 #define MIN_BUDGET_US (2u * getKernelWcetUs() * CONFIG_KERNEL_WCET_SCALE)
 #define MIN_BUDGET    (2u * getKernelWcetTicks() * CONFIG_KERNEL_WCET_SCALE)
-#if (CONFIG_KERNEL_STATIC_MAX_BUDGET_US) != 0
-#define MAX_BUDGET_US (CONFIG_KERNEL_STATIC_MAX_BUDGET_US)
+#if (CONFIG_KERNEL_STATIC_MAX_PERIOD_US) != 0
+#define MAX_PERIOD_US (CONFIG_KERNEL_STATIC_MAX_PERIOD_US)
 #else
-#define MAX_BUDGET_US getMaxUsToTicks()
-#endif /* CONFIG_KERNEL_STATIC_MAX_BUDGET_US != 0 */
+/* The maximum period determines the point at which the scheduling logic
+ * will no longer function correctly (UINT64_MAX - 5 * MAX_PERIOD), so
+ * we keep the maximum period relatively small to ensure that the system
+ * can function for a reasonably long time.
+ *
+ * Anything below getMaxUsToTicks() / 8 would ensure that time up to
+ * 2^63 would still be be valid as 5 * (getMaxUsToTicks()) must be less
+ * than 2^62. */
+#define MAX_PERIOD_US (getMaxUsToTicks() / 8)
+#endif /* CONFIG_KERNEL_STATIC_MAX_PERIOD_US != 0 */
+#define MAX_RELEASE_TIME (UINT64_MAX - 5 * usToTicks(MAX_PERIOD_US))
 
 /* Short hand for accessing refill queue items */
 static inline refill_t *refill_index(sched_context_t *sc, word_t index)
@@ -119,6 +128,50 @@ static inline bool_t refill_ready(sched_context_t *sc)
     return refill_head(sc)->rTime <= (NODE_STATE_ON_CORE(ksCurTime, sc->scCore) + getKernelWcetTicks());
 }
 
+/*
+ * Return true if an SC has been successfully configured with parameters
+ * that allow for a thread to run.
+ */
+static inline bool_t sc_active(sched_context_t *sc)
+{
+    return sc->scRefillMax > 0;
+}
+
+/*
+ * Return true if a SC has been 'released', if its head refill is
+ * sufficient and is in the past.
+ */
+static inline bool_t sc_released(sched_context_t *sc)
+{
+    if (sc_active(sc)) {
+        /* All refills must all be greater than MIN_BUDGET so this
+         * should be true for all active SCs */
+        assert(refill_sufficient(sc, 0));
+        return refill_ready(sc);
+    } else {
+        return false;
+    }
+}
+
+/*
+ * Return true if a SC's available refills should be delayed at the
+ * point the associated thread becomes runnable (sporadic server).
+ */
+static inline bool_t sc_sporadic(sched_context_t *sc)
+{
+    return sc != NULL && sc->scSporadic;
+}
+
+/*
+ * Return true if a SC's available refills should be delayed at the
+ * point the associated thread becomes the current thread (constant
+ * bandwidth).
+ */
+static inline bool_t sc_constant_bandwidth(sched_context_t *sc)
+{
+    return !sc->scSporadic;
+}
+
 /* Create a new refill in a non-active sc */
 #ifdef ENABLE_SMP_SUPPORT
 void refill_new(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t period, word_t core);
@@ -139,14 +192,6 @@ void refill_update(sched_context_t *sc, ticks_t new_period, ticks_t new_budget, 
  * @param usage the amount of time to charge.
  */
 void refill_budget_check(ticks_t used);
-
-/*
- * Charge a the current scheduling context `used` amount from its
- * current refill. This will split the refill, leaving whatever is
- * left over at the head of the refill. This is only called when charging
- * `used` will not deplete the head refill.
- */
-void refill_split_check(ticks_t used);
 
 /*
  * This is called when a thread is eligible to start running: it

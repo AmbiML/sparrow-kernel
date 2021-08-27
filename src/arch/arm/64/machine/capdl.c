@@ -5,11 +5,19 @@
  */
 
 #include <config.h>
+
+#ifdef CONFIG_DEBUG_BUILD
+
 #include <arch/machine/capdl.h>
 #include <string.h>
 #include <kernel/cspace.h>
 
-#ifdef CONFIG_DEBUG_BUILD
+word_t get_tcb_sp(tcb_t *tcb)
+{
+    return tcb->tcbArch.tcbContext.registers[SP_EL0];
+}
+
+#ifdef CONFIG_PRINTING
 
 static void obj_frame_print_attrs(lookupFrame_ret_t ret);
 static void cap_frame_print_attrs_pud(pude_t *pudSlot);
@@ -27,11 +35,6 @@ static void arm64_obj_pud_print_slots(void *pgdSlot_or_vspace);
 static void arm64_cap_pt_print_slots(pde_t *pdSlot, vptr_t vptr);
 static void arm64_cap_pd_print_slots(pude_t *pudSlot, vptr_t vptr);
 static void arm64_cap_pud_print_slots(void *pgdSlot_or_vspace, vptr_t vptr);
-
-word_t get_tcb_sp(tcb_t *tcb)
-{
-    return tcb->tcbArch.tcbContext.registers[SP_EL0];
-}
 
 /* Stage-1 access permissions:
  * AP[2:1]  higer EL        EL0
@@ -371,7 +374,7 @@ void print_cap_arch(cap_t cap)
 #endif
 
         /* ARM specific caps */
-#ifdef CONFIG_ARM_SMMU
+#ifdef CONFIG_TK1_SMMU
     case cap_io_space_cap: {
         printf("%p_io_space\n", (void *)cap_io_space_cap_get_capModuleID(cap));
         break;
@@ -408,7 +411,7 @@ void print_object_arch(cap_t cap)
     }
 #endif
         /* ARM specific objects */
-#ifdef CONFIG_ARM_SMMU
+#ifdef CONFIG_TK1_SMMU
     case cap_io_space_cap: {
         printf("%p_io_space = io_space ", (void *)cap_io_space_cap_get_capModuleID(cap));
         arm_obj_iospace_print_attrs(cap);
@@ -534,7 +537,9 @@ void obj_tcb_print_vtable(tcb_t *tcb)
     }
 }
 
-void capDL(void)
+#endif /* CONFIG_PRINTING */
+
+void debug_capDL(void)
 {
     printf("arch aarch64\n");
     printf("objects {\n");
@@ -546,10 +551,12 @@ void capDL(void)
     /* reset the seen list */
     reset_seen_list();
 
+#ifdef CONFIG_PRINTING
     print_caps();
     printf("}\n");
 
     obj_irq_print_maps();
+#endif /* CONFIG_PRINTING */
 }
 
 #endif /* CONFIG_DEBUG_BUILD */
