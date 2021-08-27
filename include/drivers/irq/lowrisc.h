@@ -20,11 +20,7 @@
 
 #include "opentitan/plic.h"
 
-// TODO(mattharvey): Find the proper alternative to this hard-coded offset.
-// seL4 creates level-1 page table entries for kernel devices. These cover byte
-// ranges of size (1 << 22), rounding down to boundaries, but the PLIC may not
-// be aligned to one of such coarse boundaries.
-#define RV_PLIC0_BASE_ADDR (PLIC_PPTR + 0x10000)
+#define RV_PLIC0_BASE_ADDR PLIC_PPTR
 
 #define RV_PLIC_SEL4_TARGET CONFIG_FIRST_HART_ID
 
