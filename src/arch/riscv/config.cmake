@@ -88,6 +88,7 @@ add_sources(
         api/faults.c
         api/benchmark.c
         kernel/machine_isr.c
+        kernel/machine_timer.c
         kernel/machine_uart.c
         kernel/preboot.c
         kernel/boot.c

@@ -3,6 +3,7 @@
  */
 
 #include <arch/kernel/machine_isr.h>
+#include <arch/kernel/machine_timer.h>
 #include <arch/kernel/machine_uart.h>
 #include <arch/kernel/preboot.h>
 #include <stdint.h>
@@ -127,6 +128,14 @@ BOOT_CODE void preinit_kernel(paddr_t ui_p_reg_start, // user app paddr
   machine_printf("\n");
   machine_printf("----------\n");
   machine_printf("preinit_kernel()\n");
+
+  opentitan_timer_init(TIMER_CLOCK_HZ);
+  // TODO(mattharvey): [rdtime_sync] The seL4 scheduler sets deadlines at
+  // (rdtime + RESET_CYCLES). The implicit assumption is that the timer and
+  // rdtime are coming from the same source, so we have to start the timer at
+  // rdtime. When switching to Ibex, rdtime will have to be implemented in terms
+  // of the timer, and this can be removed.
+  opentitan_timer_set_count(riscv_read_time());
 
   uint32_t *sentinels = (uint32_t *)machine_stack_alloc;
   sentinels[0] = 0xDEADBEEF;

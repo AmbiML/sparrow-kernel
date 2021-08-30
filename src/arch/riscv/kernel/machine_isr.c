@@ -3,6 +3,7 @@
  */
 
 #include <arch/kernel/machine_isr.h>
+#include <arch/kernel/machine_timer.h>
 #include <arch/kernel/machine_uart.h>
 #include <arch/kernel/preboot.h>
 #include <stdint.h>
@@ -142,8 +143,13 @@ uint32_t machine_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
   if (mcause == 9) {
     if (a7 == 0) {
       // SBI_SET_TIMER
-      asm volatile("csrrc x0, mip, %0" ::"rK"(1 << 5));
-      asm volatile("csrrs x0, mie, %0" ::"rK"(1 << 7));
+      opentitan_timer_ack();
+      uint64_t count = ((uint64_t)a0 | (((uint64_t)a1) << 32));
+      opentitan_timer_set_deadline(count);
+      // TODO(mattharvey): Remove this resync of the timer with rdtime when
+      // rdtime itself becomes implemented in terms of the timer. (Ibex does not
+      // have a real-time clock.)
+      opentitan_timer_set_count(riscv_read_time());
       return 0;
     } else if (a7 == 1) {
       // SBI_CONSOLE_PUTCHAR

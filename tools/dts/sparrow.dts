@@ -11,32 +11,10 @@
   chosen {
     // seL4 requires including devices that it should memory map here.
     seL4,kernel-devices =
-        // TODO(mattharvey): Fix or work around an overflow of virtual
-        // addresses in seL4/tools.
-        //
-        // It seems likely this is a bug in seL4, but I haven't yet fully
-        // understood the intended design of the riscv32-specific version of
-        // the seL4 page table.
-        //
-        // The code generation c_header.py for devices_gen.h creates physical
-        // addresses at (KDEV_BASE + n * 0x400000), consistent with the 4MB
-        // increments of map_kernel_frame on riscv32. While multiple devices
-        // in the same 4MB physical block do get to share a frame, once they
-        // aren't in the same 4MB block, we get a device with n > 1, causing
-        // an overflow because KDEV_BASE is hard-coded to 0xffc00000 in the
-        // riscv32 hardware.h.
-        //
-        // Until this is fixed, uncommenting the timer line below will generate
-        // one of TIMER_PPTR or PLIC_PPTR where driver code using proper
-        // offsets will step on user memory, resulting in a store/load AMO
-        // exception.
-        //
-        // A workaround is to change the memory layout so that these two
-        // peripherals lie in the same 4MB block, but the OS probably should
-        // not impose that kind of constraint.
-
-        // &{/soc/timer@40100000},
         &{/soc/interrupt-controller@41010000};
+    // (The timer is deliberately not here, since having more than one 4MB
+    // range containing kernel devices causes an overflow beyond the end of
+    // virtual address space when mapping them.)
   };
 
   cpus {
@@ -73,13 +51,13 @@
     #size-cells = <1>;
     compatible = "simple-bus";
     ranges;
-    timer@40100000 {
+    timer@40104000 {
       compatible = "lowrisc,timer";
       clock-frequency = < 24000000 >;
-      reg = < 0x40100000 0x1000 >;
+      reg = < 0x40104000 0x1000 >;
       interrupt-parent = <&cpu0_intc>;
-      interrupts = <5>, <7>;
-      interrupts-extended = <&cpu0_intc 5>, <&cpu0_intc 7>;
+      interrupts = <5>;
+      interrupts-extended = <&cpu0_intc 5>;
     };
     plic0: interrupt-controller@41010000 {
       #interrupt-cells = <1>;
