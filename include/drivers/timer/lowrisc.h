@@ -24,6 +24,11 @@
 // device tree used at build time.
 #define RV_TIMER_BASE ((uint32_t)TIMER_PPTR)
 
+// Identifies which hart timer interrupts should be sent to, among the harts
+// connected to that timer. This may not be identical with the hartid that hart
+// will report.
+#define RV_TIMER_HART_INDEX 0
+
 // The prescaler and step will be set so that, in each microsecond, the counter
 // increases by this number.
 //
@@ -41,11 +46,11 @@
 // Offset between hart-specific registers of consecutive
 #define RV_TIMER_HART_SPACING 0x100
 
-// Base address of hart-specific registers for hartid == CONFIG_FIRST_HART_ID.
-// These can be accessed by adding this to one of the _0_REG_OFFSET macros from
+// Base address of hart-specific registers for RV_TIMER_HART_INDEX.  These can
+// be accessed by adding this to one of the _0_REG_OFFSET macros from
 // opentitan/timer.h.
 #define RV_TIMER_HART_BASE \
-  (RV_TIMER_BASE + (RV_TIMER_HART_SPACING * CONFIG_FIRST_HART_ID))
+  (RV_TIMER_BASE + (RV_TIMER_HART_SPACING * RV_TIMER_HART_INDEX))
 
 // We assume a unique comparator, since seL4 needs only one.
 #define RV_TIMER_COMPARATOR_INDEX 0

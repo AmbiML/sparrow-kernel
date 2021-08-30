@@ -24,7 +24,7 @@ static uint64_t euclidean_gcd(uint64_t a, uint64_t b) {
 
 BOOT_CODE void initTimer(void) {
   // Disable counters.
-  const uint32_t hart_bit = (1ul << CONFIG_FIRST_HART_ID);
+  const uint32_t hart_bit = (1ul << RV_TIMER_HART_INDEX);
   uint32_t timer_ctrl = RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET);
   timer_ctrl &= ~hart_bit;
   RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET) = timer_ctrl;
