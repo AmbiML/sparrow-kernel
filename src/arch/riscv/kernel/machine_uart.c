@@ -8,7 +8,7 @@
 
 // Machine-mode uart putchar + trivial printf for debugging.
 
-#define UART0_BASE_ADDR 0x40030000
+#define UART0_BASE_ADDR 0x40010000
 
 // Register definitions copied from opentitan/uart.h
 //

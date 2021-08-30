@@ -92,13 +92,13 @@
       riscv,ndev = <96>;
       riscv,max-priority = <0x07>;
     };
-    uart0: serial@40030000 {
+    uart0: serial@40010000 {
       compatible = "lowrisc,uart";
-      reg = <0x40030000 0x1000>;
+      reg = <0x40010000 0x1000>;
       interrupt-parent = <&plic0>;
-      interrupts = <25>, <26>, <27>, <28>, <29>, <30>, <31>, <32>;
-      interrupts-extended = <&plic0 25>, <&plic0 26>, <&plic0 27>,
-          <&plic0 28>, <&plic0 29>, <&plic0 30>, <&plic0 31>, <&plic0 32>;
+      interrupts = <9>, <10>, <11>, <12>, <13>, <14>, <15>, <16>;
+      interrupts-extended = <&plic0 9>, <&plic0 10>, <&plic0 11>,
+          <&plic0 12>, <&plic0 13>, <&plic0 14>, <&plic0 15>, <&plic0 16>;
     };
   };
 };
