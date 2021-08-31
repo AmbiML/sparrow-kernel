@@ -25,7 +25,9 @@
 //   3. Sets the prescaler and step so that the counter will increase at the
 //      given counter_frequency_hz.
 //   4. Re-enables interrupts and sets the hart enabled bit.
-void opentitan_timer_init(uint64_t counter_frequency_hz);
+//
+// Returns whether the timer was initialized successfully.
+bool opentitan_timer_init(uint32_t counter_frequency_hz);
 
 // Gets the current value of the counter.
 uint64_t opentitan_timer_get_count(void);

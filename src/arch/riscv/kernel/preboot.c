@@ -83,10 +83,9 @@ BOOT_CODE static __attribute__((naked)) void set_sscratch(uint32_t a0) {
 // function so we can run in supervisor mode using the kernel stack with virtual
 // addresses. Arguments a0-a4 are passed along to the target function.
 
-BOOT_CODE static __attribute__((naked)) void
-machine_to_supervisor_trampoline(uint32_t a0, uint32_t a1, uint32_t a2,
-                                 uint32_t a3, uint32_t a4, uint32_t a5_satp,
-                                 uint32_t a6_target, uint32_t a7_offset) {
+BOOT_CODE static __attribute__((naked)) void machine_to_supervisor_trampoline(
+    uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4,
+    uint32_t a5_satp, uint32_t a6_target, uint32_t a7_offset) {
   asm volatile(
       ".option push\n"
       ".option norelax\n"
@@ -118,18 +117,20 @@ machine_to_supervisor_trampoline(uint32_t a0, uint32_t a1, uint32_t a2,
 // This is the first method in the seL4 kernel.elf that runs after _start.
 // This function executes in machine-mode and uses the machine-mode stack.
 
-BOOT_CODE void preinit_kernel(paddr_t ui_p_reg_start, // user app paddr
-                              paddr_t ui_p_reg_end,   // user app paddr
-                              sword_t pv_offset, // user app virt-to-phys offset
-                              vptr_t v_entry)    // user app vaddr entry point
+BOOT_CODE void preinit_kernel(
+    paddr_t ui_p_reg_start,  // user app paddr
+    paddr_t ui_p_reg_end,    // user app paddr
+    sword_t pv_offset,       // user app virt-to-phys offset
+    vptr_t v_entry)          // user app vaddr entry point
 {
-
   machine_init_uart();
   machine_printf("\n");
   machine_printf("----------\n");
   machine_printf("preinit_kernel()\n");
 
-  opentitan_timer_init(TIMER_CLOCK_HZ);
+  machine_assert(((uint32_t)TIMER_CLOCK_HZ < UINT32_MAX) &&
+                     opentitan_timer_init(TIMER_CLOCK_HZ),
+                 "timer init");
 
   uint32_t *sentinels = (uint32_t *)machine_stack_alloc;
   sentinels[0] = 0xDEADBEEF;

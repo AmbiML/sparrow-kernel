@@ -52,37 +52,10 @@
 #define RV_TIMER_HART_REG(name) \
   *((volatile uint32_t *)(RV_TIMER_HART_BASE + name))
 
-// Divides two 64-bit integers by repeated subtraction. We will typically use
-// this to divide the tick rate into the timer clock frequency, in which case
-// the quotient will be small.
-static void divmod64(uint64_t dividend, uint64_t divisor, uint64_t *quotient,
-                     uint64_t *remainder) {
-  // TODO(mattharvey): See if gcc can be rebuilt with --enable-multilib and
-  // remove this.
-  *quotient = 0;
-  *remainder = dividend;
-  while (*remainder >= divisor) {
-    *remainder -= divisor;
-    ++*quotient;
-  }
-}
-
-static uint64_t div64(uint64_t dividend, uint64_t divisor) {
-  uint64_t quotient, remainder;
-  divmod64(dividend, divisor, &quotient, &remainder);
-  return quotient;
-}
-
-static uint64_t mod64(uint64_t dividend, uint64_t divisor) {
-  uint64_t quotient, remainder;
-  divmod64(dividend, divisor, &quotient, &remainder);
-  return remainder;
-}
-
-static uint64_t euclidean_gcd(uint64_t a, uint64_t b) {
+static uint32_t euclidean_gcd(uint32_t a, uint32_t b) {
   while (b != 0) {
-    uint64_t old_b = b;
-    b = mod64(a, b);
+    uint32_t old_b = b;
+    b = a % b;
     a = old_b;
   }
   return a;
@@ -93,7 +66,7 @@ static void opentitan_timer_set_count(uint64_t count) {
   RV_TIMER_HART_REG(RV_TIMER_TIMER_V_UPPER0_REG_OFFSET) = count >> 32;
 }
 
-void opentitan_timer_init(uint64_t counter_frequency_hz) {
+bool opentitan_timer_init(uint32_t counter_frequency_hz) {
   // Disable counters.
   const uint32_t hart_bit = (1ul << RV_TIMER_HART_INDEX);
   uint32_t timer_ctrl = RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET);
@@ -110,13 +83,17 @@ void opentitan_timer_init(uint64_t counter_frequency_hz) {
   RV_TIMER_HART_REG(RV_TIMERCMP_UPPER_OFFSET) = UINT32_MAX;
 
   // Set the prescale and step.
-  const uint64_t gcd = euclidean_gcd(RV_TIMER_CLOCK_HZ, counter_frequency_hz);
-  const uint64_t prescale = div64(RV_TIMER_CLOCK_HZ, gcd) - 1;
-  const uint64_t step = div64(counter_frequency_hz, gcd);
+  const uint32_t gcd = euclidean_gcd(RV_TIMER_CLOCK_HZ, counter_frequency_hz);
+  const uint32_t prescale = RV_TIMER_CLOCK_HZ / gcd - 1;
+  const uint32_t step = counter_frequency_hz / gcd;
+  const uint32_t prescale_masked = prescale & RV_TIMER_CFG0_PRESCALE_MASK;
+  const uint32_t step_masked = step & RV_TIMER_CFG0_STEP_MASK;
+  if (!((prescale == prescale_masked) && (step == step_masked))) {
+    return false;
+  }
   RV_TIMER_HART_REG(RV_TIMER_CFG0_REG_OFFSET) =
-      (((prescale & RV_TIMER_CFG0_PRESCALE_MASK)
-        << RV_TIMER_CFG0_PRESCALE_OFFSET) |
-       ((step & RV_TIMER_CFG0_STEP_MASK) << RV_TIMER_CFG0_STEP_OFFSET));
+      ((prescale_masked << RV_TIMER_CFG0_PRESCALE_OFFSET) |
+       (step_masked << RV_TIMER_CFG0_STEP_OFFSET));
 
   // Set the initial count to zero.
   opentitan_timer_set_count(0);
@@ -126,6 +103,8 @@ void opentitan_timer_init(uint64_t counter_frequency_hz) {
 
   // Set enabled for seL4's hart.
   RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET) = hart_bit;
+
+  return true;
 }
 
 uint64_t opentitan_timer_get_count(void) {
