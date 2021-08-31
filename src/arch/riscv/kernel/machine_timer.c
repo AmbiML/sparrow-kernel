@@ -88,6 +88,11 @@ static uint64_t euclidean_gcd(uint64_t a, uint64_t b) {
   return a;
 }
 
+static void opentitan_timer_set_count(uint64_t count) {
+  RV_TIMER_HART_REG(RV_TIMER_TIMER_V_LOWER0_REG_OFFSET) = (uint32_t)count;
+  RV_TIMER_HART_REG(RV_TIMER_TIMER_V_UPPER0_REG_OFFSET) = count >> 32;
+}
+
 void opentitan_timer_init(uint64_t counter_frequency_hz) {
   // Disable counters.
   const uint32_t hart_bit = (1ul << RV_TIMER_HART_INDEX);
@@ -135,11 +140,6 @@ uint64_t opentitan_timer_get_count(void) {
       return (((uint64_t)upper) << 32) | lower;
     }
   }
-}
-
-void opentitan_timer_set_count(uint64_t count) {
-  RV_TIMER_HART_REG(RV_TIMER_TIMER_V_LOWER0_REG_OFFSET) = (uint32_t)count;
-  RV_TIMER_HART_REG(RV_TIMER_TIMER_V_UPPER0_REG_OFFSET) = count >> 32;
 }
 
 void opentitan_timer_set_deadline(uint64_t count) {

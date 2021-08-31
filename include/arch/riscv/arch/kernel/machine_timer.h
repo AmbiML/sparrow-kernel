@@ -30,9 +30,6 @@ void opentitan_timer_init(uint64_t counter_frequency_hz);
 // Gets the current value of the counter.
 uint64_t opentitan_timer_get_count(void);
 
-// Sets the current value of the counter.
-void opentitan_timer_set_count(uint64_t count);
-
 // Schedules an interrupt at the given (absolute) counter value.
 void opentitan_timer_set_deadline(uint64_t count);
 
