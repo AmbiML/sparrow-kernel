@@ -47,7 +47,7 @@ def main(parse_args):
         depth = int(match.group(1))
         header = match.group(2)
 
-        if depth == 1:
+        if depth <= 1:
             # found a new header
             if header in file_stack:
                 print("Circular includes found:")
