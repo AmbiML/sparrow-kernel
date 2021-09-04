@@ -288,11 +288,27 @@ static inline void plic_complete_claim(irq_t irq) {
 
 static inline void plic_mask_irq(bool_t disable, irq_t irq) {
   mmio_region_t base_addr = plic_base_addr();
-  plic_reg_info_t reg_info = plic_irq_enable_reg_info(irq, RV_PLIC_SEL4_TARGET);
+  for (uint32_t target = 0; target < RV_PLIC_PARAM_NUM_TARGET; ++target) {
+    bool new_bit = !disable;
+    // When an IRQ is enabled for seL4, disable it for all other targets to
+    // prevent stolen claims. If we are disabling for seL4, do nothing for other
+    // targets.
+    //
+    // TODO(b/199195540): Adjust this in accord with the strategy that is
+    // ultimately agreed upon in scope of the bug.
+    if (target != RV_PLIC_SEL4_TARGET) {
+      if (disable) {
+        continue;
+      } else {
+        new_bit = false;
+      }
+    }
 
-  uint32_t reg = mmio_region_read32(base_addr, reg_info.offset);
-  reg = bitfield_bit32_write(reg, reg_info.bit_index, !disable);
-  mmio_region_write32(base_addr, reg_info.offset, reg);
+    plic_reg_info_t reg_info = plic_irq_enable_reg_info(irq, target);
+    uint32_t reg = mmio_region_read32(base_addr, reg_info.offset);
+    reg = bitfield_bit32_write(reg, reg_info.bit_index, new_bit);
+    mmio_region_write32(base_addr, reg_info.offset, reg);
+  }
 }
 
 #ifdef HAVE_SET_TRIGGER
@@ -306,13 +322,4 @@ static inline void plic_irq_set_trigger(irq_t irq, bool_t edge_triggered) {
 }
 #endif
 
-static void plic_init_controller(void) {
-  plic_reset();
-  mmio_region_t base_addr = plic_base_addr();
-
-  // Set the priority of each source to 1.
-  for (int i = 0; i < RV_PLIC_PARAM_NUM_SRC; ++i) {
-    ptrdiff_t offset = RV_PLIC_PRIO0_REG_OFFSET + i * sizeof(uint32_t);
-    mmio_region_write32(base_addr, offset, 1);
-  }
-}
+static void plic_init_controller(void) { plic_reset(); }
