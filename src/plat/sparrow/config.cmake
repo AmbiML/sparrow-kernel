@@ -17,7 +17,7 @@ if(KernelPlatformSparrow)
         TIMER_FREQUENCY 24000000
 
         INTERRUPT_CONTROLLER drivers/irq/lowrisc.h
-        PLIC_MAX_NUM_INT 96
+        PLIC_MAX_NUM_INT 183
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)

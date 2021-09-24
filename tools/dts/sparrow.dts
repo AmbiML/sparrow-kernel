@@ -67,7 +67,7 @@
       interrupt-parent = <&cpu0_intc>;
       interrupts = <9>, <11>;
       interrupts-extended = <&cpu0_intc 9>, <&cpu0_intc 11>;
-      riscv,ndev = <96>;
+      riscv,ndev = <183>;
       riscv,max-priority = <0x07>;
     };
     uart0: serial@40010000 {
