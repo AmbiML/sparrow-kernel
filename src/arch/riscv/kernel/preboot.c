@@ -107,6 +107,11 @@ BOOT_CODE static __attribute__((naked)) void machine_to_supervisor_trampoline(
       "add gp, gp, a7\n"
       "add sp, sp, a7\n"
 
+      // Set mstatus so we mret into supervisor mode with interrupts _disabled_.
+      // MPP = 0b01 (supervisor mode), MIE/SIE/UIE = 0.
+      "li x1, 0x00000800\n"
+      "csrw mstatus, x1\n"
+
       // Leave machine-mode and resume at init_kernel in supervisor mode.
       "csrw mepc, a6\n"
       "mret\n"
@@ -161,14 +166,6 @@ BOOT_CODE void preinit_kernel(
       (1U << CAUSE_STORE_PAGE_FAULT) | (1U << CAUSE_USER_ECALL);
   asm volatile("csrw mideleg, %0" ::"rK"(interrupts));
   asm volatile("csrw medeleg, %0" ::"rK"(exceptions));
-
-  // Enable machine-mode interrupts.
-  uint32_t mstatus;
-  asm volatile("csrr %0, mstatus" : "=r"(mstatus));
-  mstatus &= ~MSTATUS_MPP;
-  mstatus |= PRV_S << 11;
-  mstatus &= ~MSTATUS_MPIE;
-  asm volatile("csrw mstatus, %0" ::"r"(mstatus));
 
   // Map the kernel physical megapage to virtual megapage.
   machine_map_megapage((void *)KERNEL_ELF_PADDR_BASE, (void *)KERNEL_ELF_BASE,
