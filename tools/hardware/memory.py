@@ -13,7 +13,7 @@ import hardware.utils as utils
 class Region:
     ''' Represents a region of memory. '''
 
-    def __init__(self, base: int, size: int, owner: 'WrappedNode'):
+    def __init__(self, base: int, size: int, owner: 'WrappedNode' = None):
         self.base = base
         self.size = size
         self.owner = owner
@@ -40,7 +40,7 @@ class Region:
         return hash((self.base, self.size))
 
     @staticmethod
-    def from_range(start, end, owner):
+    def from_range(start, end, owner=None):
         ''' create a region from a start/end rather than start/size '''
         ret = Region(start, end - start, owner)
         return ret
