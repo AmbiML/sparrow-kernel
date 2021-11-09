@@ -122,16 +122,20 @@ BOOT_CODE static __attribute__((naked)) void machine_to_supervisor_trampoline(
 // This is the first method in the seL4 kernel.elf that runs after _start.
 // This function executes in machine-mode and uses the machine-mode stack.
 
-BOOT_CODE void preinit_kernel(
-    paddr_t ui_p_reg_start,  // user app paddr
-    paddr_t ui_p_reg_end,    // user app paddr
-    sword_t pv_offset,       // user app virt-to-phys offset
-    vptr_t v_entry)          // user app vaddr entry point
+BOOT_CODE void preinit_kernel(void)
 {
   machine_init_uart();
   machine_printf("\n");
   machine_printf("----------\n");
   machine_printf("preinit_kernel()\n");
+
+  // The bootrom should've left us info about our root app in our mailbox.
+
+  volatile uint32_t* mailbox = (volatile uint32_t*)0x400F1000;
+  paddr_t ui_p_reg_start = (paddr_t)mailbox[0];  // user app paddr
+  paddr_t ui_p_reg_end = (paddr_t)mailbox[1];    // user app paddr
+  sword_t pv_offset = (sword_t)mailbox[2];       // user app virt-to-phys offset
+  vptr_t v_entry = (vptr_t)mailbox[3];           // user app vaddr entry point
 
   machine_assert(((uint32_t)TIMER_CLOCK_HZ < UINT32_MAX) &&
                      opentitan_timer_init(TIMER_CLOCK_HZ),
