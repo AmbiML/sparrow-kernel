@@ -257,13 +257,6 @@ devices:
         kernel: PLIC_PPTR
         kernel_size: 0x04000000
 
-  # OpenTitan PLIC
-  - compatible:
-      - lowrisc,plic
-    regions:
-      - index: 0
-        kernel: PLIC_PPTR
-
   # elfloader rules
   - compatible:
       - arm,psci-0.2

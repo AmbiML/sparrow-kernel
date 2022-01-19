@@ -27,7 +27,7 @@
 //   4. Re-enables interrupts and sets the hart enabled bit.
 //
 // Returns whether the timer was initialized successfully.
-bool opentitan_timer_init(uint32_t counter_frequency_hz);
+bool_t opentitan_timer_init(uint32_t counter_frequency_hz);
 
 // Gets the current value of the counter.
 uint64_t opentitan_timer_get_count(void);

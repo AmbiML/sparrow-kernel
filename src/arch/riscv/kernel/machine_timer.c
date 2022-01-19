@@ -66,7 +66,7 @@ static void opentitan_timer_set_count(uint64_t count) {
   RV_TIMER_HART_REG(RV_TIMER_TIMER_V_UPPER0_REG_OFFSET) = count >> 32;
 }
 
-bool opentitan_timer_init(uint32_t counter_frequency_hz) {
+bool_t opentitan_timer_init(uint32_t counter_frequency_hz) {
   // Disable counters.
   const uint32_t hart_bit = (1ul << RV_TIMER_HART_INDEX);
   uint32_t timer_ctrl = RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET);

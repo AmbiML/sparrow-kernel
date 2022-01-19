@@ -16,7 +16,6 @@ macro(register_driver compatibility_strings match_strings)
     endforeach()
 endmacro()
 
-include(src/drivers/irq/config.cmake)
 include(src/drivers/serial/config.cmake)
 include(src/drivers/smmu/config.cmake)
 include(src/drivers/timer/config.cmake)

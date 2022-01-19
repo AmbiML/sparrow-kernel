@@ -11,7 +11,7 @@
   chosen {
     // seL4 requires including devices that it should memory map here.
     seL4,kernel-devices =
-        &{/soc/interrupt-controller@41010000};
+        &{/soc/interrupt-controller@58000000};
     // (The timer is deliberately not here, since having more than one 4MB
     // range containing kernel devices causes an overflow beyond the end of
     // virtual address space when mapping them.)
@@ -59,24 +59,24 @@
       interrupts = <5>;
       interrupts-extended = <&cpu0_intc 5>;
     };
-    plic0: interrupt-controller@41010000 {
+    plic0: interrupt-controller@58000000 {
       #interrupt-cells = <1>;
-      compatible = "lowrisc,plic";
-      reg = <0x41010000 0x1000>;
+      compatible = "riscv,plic0";
+      reg = <0x58000000 0x4000000>;
       interrupt-controller;
       interrupt-parent = <&cpu0_intc>;
       interrupts = <9>, <11>;
       interrupts-extended = <&cpu0_intc 9>, <&cpu0_intc 11>;
-      riscv,ndev = <183>;
+      riscv,ndev = <14>;
       riscv,max-priority = <0x07>;
     };
-    uart0: serial@40010000 {
+    uart0: serial@50000000 {
       compatible = "lowrisc,uart";
-      reg = <0x40010000 0x1000>;
+      reg = <50000000 0x1000>;
       interrupt-parent = <&plic0>;
-      interrupts = <9>, <10>, <11>, <12>, <13>, <14>, <15>, <16>;
-      interrupts-extended = <&plic0 9>, <&plic0 10>, <&plic0 11>,
-          <&plic0 12>, <&plic0 13>, <&plic0 14>, <&plic0 15>, <&plic0 16>;
+      interrupts = <1>, <2>, <3>, <4>, <5>, <6>, <7>, <8>;
+      interrupts-extended = <&plic0 1>, <&plic0 2>, <&plic0 3>,
+          <&plic0 4>, <&plic0 5>, <&plic0 6>, <&plic0 7>, <&plic0 8>;
     };
   };
 };

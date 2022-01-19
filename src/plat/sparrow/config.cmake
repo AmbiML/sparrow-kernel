@@ -16,8 +16,8 @@ if(KernelPlatformSparrow)
         # cpu1 rdtime is incremented.
         TIMER_FREQUENCY 24000000
 
-        INTERRUPT_CONTROLLER drivers/irq/lowrisc.h
-        PLIC_MAX_NUM_INT 183
+        INTERRUPT_CONTROLLER drivers/irq/smc_plic.h
+        PLIC_MAX_NUM_INT 14
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)
