@@ -18,13 +18,6 @@
 // will report.
 #define RV_TIMER_HART_INDEX 0
 
-// Nonstandard offset of TIMER_CTRL register.
-//
-// The Renode emulation has TIMER_CTRL at 0x0, which does not agree with the
-// OpenTitan documentation and opentitan/timer.h. These have
-// RV_TIMER_CTRL_REG_OFFSET == 0x4.
-#define RV_TIMER_CUSTOM_CTRL_REG_OFFSET 0x0
-
 // Offset between hart-specific registers of consecutive
 #define RV_TIMER_HART_SPACING 0x100
 
@@ -69,9 +62,9 @@ static void opentitan_timer_set_count(uint64_t count) {
 bool_t opentitan_timer_init(uint32_t counter_frequency_hz) {
   // Disable counters.
   const uint32_t hart_bit = (1ul << RV_TIMER_HART_INDEX);
-  uint32_t timer_ctrl = RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET);
+  uint32_t timer_ctrl = RV_TIMER_REG(RV_TIMER_CTRL_REG_OFFSET);
   timer_ctrl &= ~hart_bit;
-  RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET) = timer_ctrl;
+  RV_TIMER_REG(RV_TIMER_CTRL_REG_OFFSET) = timer_ctrl;
 
   // Claim any pending interrupts.
   RV_TIMER_HART_REG(RV_TIMER_INTR_STATE0_REG_OFFSET) = 1;
@@ -102,7 +95,7 @@ bool_t opentitan_timer_init(uint32_t counter_frequency_hz) {
   RV_TIMER_HART_REG(RV_TIMER_INTR_ENABLE0_REG_OFFSET) = 1;
 
   // Set enabled for seL4's hart.
-  RV_TIMER_REG(RV_TIMER_CUSTOM_CTRL_REG_OFFSET) = hart_bit;
+  RV_TIMER_REG(RV_TIMER_CTRL_REG_OFFSET) = hart_bit;
 
   return true;
 }
