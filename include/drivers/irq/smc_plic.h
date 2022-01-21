@@ -167,17 +167,18 @@ static inline void plic_init_hart(void)
 
 static inline void plic_init_controller(void)
 {
-
-    for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
-        /* Clear all pending bits */
-        if (plic_pending_interrupt(i)) {
-            readl(PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
-            writel(i, PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
-        }
-    }
+    // TODO(b/215715756): This doesn't do anything in sim other than cause noisy logs.
+    // Investigate whether this is necessary on real hardware.
+    // for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
+    //     /* Clear all pending bits */
+    //     if (plic_pending_interrupt(i)) {
+    //         readl(PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
+    //         writel(i, PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
+    //     }
+    // }
 
     /* Set the priorities of all interrupts to 1 */
-    for (int i = 1; i <= PLIC_MAX_IRQ + 1; i++) {
+    for (int i = 1; i < PLIC_MAX_IRQ + 1; i++) {
         writel(2, PLIC_PPTR_BASE + PLIC_PRIO + PLIC_PRIO_PER_ID * i);
     }
 
