@@ -8,7 +8,7 @@
 
 // Base address for the entire timer, defined in devices_gen.h based on the
 // device tree used at build time.
-#define RV_TIMER_BASE 0x40104000
+#define RV_TIMER_BASE 0x50010000
 
 // The clock rate of the timer. Used for setting the prescaler and step.
 #define RV_TIMER_CLOCK_HZ 24000000

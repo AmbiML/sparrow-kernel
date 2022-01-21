@@ -51,10 +51,10 @@
     #size-cells = <1>;
     compatible = "simple-bus";
     ranges;
-    timer@40104000 {
+    timer@50010000 {
       compatible = "lowrisc,timer";
       clock-frequency = < 24000000 >;
-      reg = < 0x40104000 0x1000 >;
+      reg = < 0x50010000 0x1000 >;
       interrupt-parent = <&cpu0_intc>;
       interrupts = <5>;
       interrupts-extended = <&cpu0_intc 5>;
