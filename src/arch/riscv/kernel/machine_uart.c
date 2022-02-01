@@ -14,20 +14,20 @@
 //
 // Copy/paste instead of include is to avoid adding includes to seL4 kernel
 // build rules.
-#define UART_FIFO_CTRL(id) (UART##id##_BASE_ADDR + 0x1c)
+#define UART_FIFO_CTRL(id) (UART##id##_BASE_ADDR + 0x20)
 #define UART_FIFO_CTRL_RXRST 0
 #define UART_FIFO_CTRL_TXRST 1
 
-#define UART_CTRL(id) (UART##id##_BASE_ADDR + 0xc)
+#define UART_CTRL(id) (UART##id##_BASE_ADDR + 0x10)
 #define UART_CTRL_TX 0
 #define UART_CTRL_RX 1
 #define UART_CTRL_NCO_MASK 0xffff
 #define UART_CTRL_NCO_OFFSET 16
 
-#define UART_STATUS(id) (UART##id##_BASE_ADDR + 0x10)
+#define UART_STATUS(id) (UART##id##_BASE_ADDR + 0x14)
 #define UART_STATUS_TXFULL 0
 
-#define UART_WDATA(id) (UART##id##_BASE_ADDR + 0x18)
+#define UART_WDATA(id) (UART##id##_BASE_ADDR + 0x1c)
 #define UART_WDATA_REG_OFFSET 0x18
 #define UART_WDATA_WDATA_MASK 0xff
 #define UART_WDATA_WDATA_OFFSET 0
