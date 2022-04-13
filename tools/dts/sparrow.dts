@@ -59,6 +59,14 @@
       interrupts = <5>;
       interrupts-extended = <&cpu0_intc 5>;
     };
+    timersw@50030000 {
+      compatible = "lowrisc,timer";
+      clock-frequency = < 24000000 >;
+      reg = < 0x50030000 0x1000 >;
+      interrupt-parent = <&plic0>;
+      interrupts = <15>;
+      interrupts-extended = <&plic0 15>;
+    };
     plic0: interrupt-controller@58000000 {
       #interrupt-cells = <1>;
       compatible = "riscv,plic0";
@@ -67,7 +75,7 @@
       interrupt-parent = <&cpu0_intc>;
       interrupts = <9>, <11>;
       interrupts-extended = <&cpu0_intc 9>, <&cpu0_intc 11>;
-      riscv,ndev = <14>;
+      riscv,ndev = <15>;
       riscv,max-priority = <0x07>;
     };
     uart0: serial@50000000 {
