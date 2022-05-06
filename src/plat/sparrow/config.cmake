@@ -19,7 +19,7 @@ if(KernelPlatformSparrow)
         TIMER_FREQUENCY 24000000
 
         INTERRUPT_CONTROLLER drivers/irq/smc_plic.h
-        PLIC_MAX_NUM_INT 15
+        PLIC_MAX_NUM_INT 16 // kTopMatchaPlicIrqIdLastSmc @ top_matcha.h
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)

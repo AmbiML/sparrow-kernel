@@ -75,7 +75,7 @@
       interrupt-parent = <&cpu0_intc>;
       interrupts = <9>, <11>;
       interrupts-extended = <&cpu0_intc 9>, <&cpu0_intc 11>;
-      riscv,ndev = <15>;
+      riscv,ndev = <16>; // kTopMatchaPlicIrqIdLastSmc @ top_matcha.h
       riscv,max-priority = <0x07>;
     };
     uart0: serial@50000000 {
