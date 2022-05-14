@@ -11,7 +11,7 @@
   chosen {
     // seL4 requires including devices that it should memory map here.
     seL4,kernel-devices =
-        &{/soc/interrupt-controller@58000000};
+        &{/soc/interrupt-controller@60000000};
     // (The timer is deliberately not here, since having more than one 4MB
     // range containing kernel devices causes an overflow beyond the end of
     // virtual address space when mapping them.)
@@ -68,16 +68,15 @@
       interrupts = <31>;
       interrupts-extended = <&plic0 31>;
     };
-    plic0: interrupt-controller@58000000 {
+    plic0: interrupt-controller@60000000 { // TOP_MATCHA_RV_PLIC_SMC_BASE_ADDR @ top_matcha.h
       #interrupt-cells = <1>;
       compatible = "riscv,plic0";
-      reg = <0x58000000 0x4000000>;
+      reg = <0x60000000 0x8000000>; // TOP_MATCHA_RV_PLIC_SMC_SIZE_BYTES @ top_matcha.h
       interrupt-controller;
       interrupt-parent = <&cpu0_intc>;
       interrupts = <9>, <11>;
       interrupts-extended = <&cpu0_intc 9>, <&cpu0_intc 11>;
-      // Must be >= kTopMatchaPlicIrqIdLastSmc in top_matcha.h
-      riscv,ndev = <32>;
+      riscv,ndev = <32>; // Must be >= kTopMatchaPlicIrqIdLastSmc @ top_matcha.h
       riscv,max-priority = <0x07>;
     };
     uart0: serial@50000000 {
