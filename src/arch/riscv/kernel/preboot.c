@@ -150,13 +150,27 @@ BOOT_CODE void preinit_kernel(void)
 
   // The bootrom should've left us info about our root app in our mailbox. Each
   // read at the inbox address de-queues one dword from the mailbox.
-  paddr_t ui_p_reg_start = (paddr_t)(mailbox->MBOXR); // user app paddr
-  paddr_t ui_p_reg_end = (paddr_t)(mailbox->MBOXR);   // user app paddr
-  sword_t pv_offset = (sword_t)(mailbox->MBOXR);      // user app virt-to-phys offset
-  vptr_t v_entry = (vptr_t)(mailbox->MBOXR);          // user app vaddr entry point
 
-  // Send 'BOOT' in ASCII back to SEC so they know we're booting.
-  mailbox->MBOXW = 0x544F4F42;
+  paddr_t ui_p_reg_start = 0;
+  paddr_t ui_p_reg_end = 0;
+  sword_t pv_offset = 0;
+  vptr_t v_entry = 0;
+
+  uint32_t message_size = mailbox->MBOXR;
+  uint32_t message_dwords = message_size / 4;
+  for (int i = 0; i < message_dwords; i++) {
+    uint32_t message = mailbox->MBOXR;
+    switch(i) {
+      case 0: ui_p_reg_start = (paddr_t)message; break; // user app paddr
+      case 1: ui_p_reg_end = (paddr_t)message; break;   // user app paddr
+      case 2: pv_offset = (sword_t)message; break;      // user app virt-to-phys offset
+      case 3: v_entry = (vptr_t)message; break;         // user app vaddr entry point
+      default: {
+        machine_printf("Unexpected boot messsage %d = 0x%08x\n", i, message);
+        break;
+      } 
+    }
+  }
 
   machine_assert(((uint32_t)TIMER_CLOCK_HZ < UINT32_MAX) &&
                      opentitan_timer_init(TIMER_CLOCK_HZ),
