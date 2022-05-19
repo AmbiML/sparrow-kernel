@@ -8,6 +8,9 @@
 #include <bootinfo.h>
 #include <arch/bootinfo.h>
 
+#define DUMMY_CNODE_SIZE_BITS (2 + seL4_SlotBits)
+#define DUMMY_CNODE_SIZE (1 << DUMMY_CNODE_SIZE_BITS)
+
 #ifndef CONFIG_ARCH_ARM
 #define MAX_NUM_FREEMEM_REG 16
 #else
@@ -64,6 +67,7 @@ bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_pos_before
 bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_reuse_reg, seL4_SlotPos first_untyped_slot);
 void bi_finalise(void);
 void create_domain_cap(cap_t root_cnode_cap);
+cap_t create_rootserver_obj(object_t objectType, word_t slot, word_t userSize);
 
 cap_t create_ipcbuf_frame_cap(cap_t root_cnode_cap, cap_t pd_cap, vptr_t vptr);
 word_t calculate_extra_bi_size_bits(word_t extra_size);

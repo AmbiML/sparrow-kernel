@@ -23,6 +23,17 @@ BOOT_BSS ndks_boot_t ndks_boot;
 BOOT_BSS rootserver_mem_t rootserver;
 BOOT_BSS static region_t rootserver_mem;
 
+BOOT_BSS word_t current_untyped;
+/*
+ * To boostrap the system a 2-slot CNode is manually constructed in a static memory
+ * block. The CNode holds an untyped memory object from which all rootserver objects
+ * are derived and the CNode for the (1-level) rootserver CSpace.
+ */
+BOOT_BSS char dummy_cnode_mem[DUMMY_CNODE_SIZE] __attribute__((aligned (DUMMY_CNODE_SIZE)));
+#define DUMMY_CNODE_SLOT      0 /* Bootstrap 2-slot CNode */
+#define DUMMY_UNTYPED_SLOT    1 /* untyped root object */
+#define DUMMY_ROOT_CNODE_SLOT 2 /* Rootesrver CNode */
+
 BOOT_CODE static void merge_regions(void)
 {
     /* Walk through reserved regions and see if any can be merged */
@@ -137,6 +148,58 @@ BOOT_CODE static pptr_t alloc_rootserver_obj(word_t size_bits, word_t n)
     return allocated;
 }
 
+BOOT_CODE static word_t alignUp_(word_t baseValue, word_t alignment)
+{
+    return (baseValue + (BIT(alignment) - 1)) & ~MASK(alignment);
+}
+
+BOOT_CODE cap_t create_rootserver_obj(object_t objectType, word_t slot, word_t userSize)
+{
+    assert(current_untyped > 0);
+    word_t freeIndex, freeRef;
+    word_t objectSize = getObjectSize(objectType, userSize);
+    word_t untypedFreeBytes;
+    cte_t *untyped_cte;
+    cte_t *cnode_cte = (cte_t*)rootserver.cnode;
+    cap_t untyped;
+
+    do
+    {
+        untyped_cte = SLOT_PTR(rootserver.cnode, current_untyped);
+        untyped = untyped_cte->cap;
+        assert(cap_get_capType(untyped) == cap_untyped_cap);
+        exception_t status = ensureNoChildren(untyped_cte);
+        if (status != EXCEPTION_NONE) {
+            freeIndex = cap_untyped_cap_get_capFreeIndex(untyped);
+        } else {
+            freeIndex = 0;
+        }
+        freeRef = GET_FREE_REF(cap_untyped_cap_get_capPtr(untyped), freeIndex);
+        untypedFreeBytes = BIT(cap_untyped_cap_get_capBlockSize(untyped)) -
+                           FREE_INDEX_TO_OFFSET(freeIndex);
+    }
+    while ((untypedFreeBytes >> objectSize) < 1 && ++current_untyped);
+
+    word_t alignedFreeRef = alignUp_(freeRef, objectSize);
+
+    createNewObjects(
+        objectType,                            /* objectType   */
+        untyped_cte,                           /* parent       */
+        cnode_cte,                             /* destCNode    */
+        slot,                                  /* destOffset   */
+        1,                                     /* destLength   */
+        (void *)alignedFreeRef,                /* retypeBase   */
+        userSize,                              /* userSize     */
+        false                                  /* deviceMemory */
+    );
+
+    freeRef += 1 << objectSize;
+    void* regionBase = WORD_PTR(cap_untyped_cap_get_capPtr(untyped));
+    untyped_cte->cap = cap_untyped_cap_set_capFreeIndex(untyped,
+            GET_FREE_INDEX(regionBase, freeRef));
+    return SLOT_PTR(rootserver.cnode, slot)->cap;
+}
+
 BOOT_CODE static word_t rootserver_max_size_bits(word_t extra_bi_size_bits)
 {
     word_t cnode_size_bits = CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits;
@@ -144,20 +207,16 @@ BOOT_CODE static word_t rootserver_max_size_bits(word_t extra_bi_size_bits)
     return MAX(max, extra_bi_size_bits);
 }
 
-BOOT_CODE static word_t calculate_rootserver_size(v_region_t v_reg, word_t extra_bi_size_bits)
+BOOT_CODE static word_t calculate_necessary_size(v_region_t v_reg, word_t extra_bi_size_bits)
 {
     /* work out how much memory we need for root server objects */
-    word_t size = BIT(CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits);
-    size += BIT(seL4_TCBBits); // root thread tcb
-    size += 2 * BIT(seL4_PageBits); // boot info + ipc buf
-    size += BIT(seL4_ASIDPoolBits);
+    word_t size = BIT(seL4_ASIDPoolBits);
+    size += BIT(seL4_PageBits); // boot info
     size += extra_bi_size_bits > 0 ? BIT(extra_bi_size_bits) : 0;
-    size += BIT(seL4_VSpaceBits); // root vspace
 #ifdef CONFIG_KERNEL_MCS
     size += BIT(seL4_MinSchedContextBits); // root sched context
 #endif
-    /* for all archs, seL4_PageTable Bits is the size of all non top-level paging structures */
-    return size + arch_get_n_paging(v_reg) * BIT(seL4_PageTableBits);
+    return size;
 }
 
 BOOT_CODE static void maybe_alloc_extra_bi(word_t cmp_size_bits, word_t extra_bi_size_bits)
@@ -173,48 +232,38 @@ BOOT_CODE void create_rootserver_objects(pptr_t start, v_region_t v_reg, word_t 
     word_t cnode_size_bits = CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits;
     word_t max = rootserver_max_size_bits(extra_bi_size_bits);
 
-    word_t size = calculate_rootserver_size(v_reg, extra_bi_size_bits);
+    word_t size = calculate_necessary_size(v_reg, extra_bi_size_bits)
+        + BIT(cnode_size_bits);
     rootserver_mem.start = start;
     rootserver_mem.end = start + size;
 
     maybe_alloc_extra_bi(max, extra_bi_size_bits);
-
-    /* the root cnode is at least 4k, so it could be larger or smaller than a pd. */
-#if (CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits) > seL4_VSpaceBits
-    rootserver.cnode = alloc_rootserver_obj(cnode_size_bits, 1);
-    maybe_alloc_extra_bi(seL4_VSpaceBits, extra_bi_size_bits);
-    rootserver.vspace = alloc_rootserver_obj(seL4_VSpaceBits, 1);
-#else
-    rootserver.vspace = alloc_rootserver_obj(seL4_VSpaceBits, 1);
-    maybe_alloc_extra_bi(cnode_size_bits, extra_bi_size_bits);
-    rootserver.cnode = alloc_rootserver_obj(cnode_size_bits, 1);
-#endif
+    word_t untyped_memory = alloc_rootserver_obj(cnode_size_bits, 1);
 
     /* at this point we are up to creating 4k objects - which is the min size of
      * extra_bi so this is the last chance to allocate it */
     maybe_alloc_extra_bi(seL4_PageBits, extra_bi_size_bits);
     rootserver.asid_pool = alloc_rootserver_obj(seL4_ASIDPoolBits, 1);
-    rootserver.ipc_buf = alloc_rootserver_obj(seL4_PageBits, 1);
     rootserver.boot_info = alloc_rootserver_obj(seL4_PageBits, 1);
-
-    /* TCBs on aarch32 can be larger than page tables in certain configs */
-#if seL4_TCBBits >= seL4_PageTableBits
-    rootserver.tcb = alloc_rootserver_obj(seL4_TCBBits, 1);
-#endif
-
-    /* paging structures are 4k on every arch except aarch32 (1k) */
-    word_t n = arch_get_n_paging(v_reg);
-    rootserver.paging.start = alloc_rootserver_obj(seL4_PageTableBits, n);
-    rootserver.paging.end = rootserver.paging.start + n * BIT(seL4_PageTableBits);
-
-    /* for most archs, TCBs are smaller than page tables */
-#if seL4_TCBBits < seL4_PageTableBits
-    rootserver.tcb = alloc_rootserver_obj(seL4_TCBBits, 1);
-#endif
 
 #ifdef CONFIG_KERNEL_MCS
     rootserver.sc = alloc_rootserver_obj(seL4_MinSchedContextBits, 1);
 #endif
+
+    cap_t cap =
+        cap_cnode_cap_new(
+            2,                             /* radix      */
+            wordBits - 2,                  /* guard size */
+            0,                             /* guard      */
+            (word_t)dummy_cnode_mem        /* pptr       */
+        );
+    write_slot(SLOT_PTR(dummy_cnode_mem, DUMMY_CNODE_SLOT), cap);
+
+    // Create untyped capability
+    cap_t ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(cnode_size_bits),
+                                    false, cnode_size_bits, untyped_memory);
+    write_slot(SLOT_PTR(dummy_cnode_mem, DUMMY_UNTYPED_SLOT), ut_cap);
+
     /* we should have allocated all our memory */
     assert(rootserver_mem.start == rootserver_mem.end);
 }
@@ -239,20 +288,43 @@ compile_assert(root_cnode_size_valid,
 BOOT_CODE cap_t
 create_root_cnode(void)
 {
+    word_t freeRef;
+    void* regionBase;
+
     /* write the number of root CNode slots to global state */
     ndks_boot.slot_pos_max = BIT(CONFIG_ROOT_CNODE_SIZE_BITS);
 
-    cap_t cap =
-        cap_cnode_cap_new(
-            CONFIG_ROOT_CNODE_SIZE_BITS,      /* radix      */
-            wordBits - CONFIG_ROOT_CNODE_SIZE_BITS, /* guard size */
-            0,                                /* guard      */
-            rootserver.cnode              /* pptr       */
-        );
+    cte_t *untyped_cte = SLOT_PTR(dummy_cnode_mem, DUMMY_UNTYPED_SLOT);
+    word_t untyped_start = cap_untyped_cap_get_capPtr(untyped_cte->cap);
 
-    /* write the root CNode cap into the root CNode */
-    write_slot(SLOT_PTR(rootserver.cnode, seL4_CapInitThreadCNode), cap);
+    createNewObjects(
+        seL4_CapTableObject,            /* objectType   */
+        untyped_cte,                    /* parent       */
+        (cte_t*)dummy_cnode_mem,        /* destCNode    */
+        DUMMY_ROOT_CNODE_SLOT,          /* destOffset   */
+        1,                              /* destLength   */
+        (void *)untyped_start,          /* retypeBase   */
+        CONFIG_ROOT_CNODE_SIZE_BITS,    /* userSize     */
+        false                           /* deviceMemory */
+    );
 
+    freeRef = GET_FREE_REF(cap_untyped_cap_get_capPtr(untyped_cte->cap), 0);
+    freeRef += 1 << getObjectSize(seL4_CapTableObject, CONFIG_ROOT_CNODE_SIZE_BITS);
+    regionBase = WORD_PTR(cap_untyped_cap_get_capPtr(untyped_cte->cap));
+    untyped_cte->cap = cap_untyped_cap_set_capFreeIndex(untyped_cte->cap,
+            GET_FREE_INDEX(regionBase, freeRef));
+
+    cap_t cap = SLOT_PTR(dummy_cnode_mem, DUMMY_ROOT_CNODE_SLOT)->cap;
+    cap = cap_cnode_cap_set_capCNodeRadix(cap, CONFIG_ROOT_CNODE_SIZE_BITS);
+    cap = cap_cnode_cap_set_capCNodeGuardSize(cap, wordBits - CONFIG_ROOT_CNODE_SIZE_BITS);
+    cap = cap_cnode_cap_set_capCNodeGuard(cap, 0);
+    SLOT_PTR(dummy_cnode_mem, DUMMY_ROOT_CNODE_SLOT)->cap = cap;
+
+    rootserver.cnode = cap_cnode_cap_get_capCNodePtr(cap);
+
+    cteMove(cap,
+        SLOT_PTR(dummy_cnode_mem, DUMMY_ROOT_CNODE_SLOT),
+        SLOT_PTR(rootserver.cnode, seL4_CapInitThreadCNode));
     return cap;
 }
 
@@ -279,11 +351,25 @@ create_domain_cap(cap_t root_cnode_cap)
 
 BOOT_CODE cap_t create_ipcbuf_frame_cap(cap_t root_cnode_cap, cap_t pd_cap, vptr_t vptr)
 {
+    cap_t cap;
+    seL4_SlotPos ipc_untyped_pos;
+
+    // Create untyped memory object for ipc buffer
+    cap = create_rootserver_obj(seL4_UntypedObject, ndks_boot.slot_pos_cur, seL4_PageBits);
+    rootserver.ipc_buf = cap_untyped_cap_get_capPtr(cap);
+    cap = cap_untyped_cap_set_capFreeIndex(cap,
+            GET_FREE_INDEX((void*)rootserver.ipc_buf, rootserver.ipc_buf + BIT(seL4_PageBits)));
+    SLOT_PTR(pptr_of_cap(root_cnode_cap), ndks_boot.slot_pos_cur)->cap = cap;
+    ipc_untyped_pos = ndks_boot.slot_pos_cur++;
+
     clearMemory((void *)rootserver.ipc_buf, PAGE_BITS);
 
     /* create a cap of it and write it into the root CNode */
-    cap_t cap = create_mapped_it_frame_cap(pd_cap, rootserver.ipc_buf, vptr, IT_ASID, false, false);
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadIPCBuffer), cap);
+    cap = create_mapped_it_frame_cap(pd_cap, rootserver.ipc_buf, vptr, IT_ASID, false, false);
+    insertNewCap(
+        SLOT_PTR(pptr_of_cap(root_cnode_cap), ipc_untyped_pos),
+        SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadIPCBuffer),
+        cap);
 
     return cap;
 }
@@ -454,12 +540,8 @@ BOOT_CODE bool_t create_idle_thread(void)
 BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vptr_t ui_v_entry, vptr_t bi_frame_vptr,
                                        vptr_t ipcbuf_vptr, cap_t ipcbuf_cap)
 {
-    tcb_t *tcb = TCB_PTR(rootserver.tcb + TCB_OFFSET);
-#ifndef CONFIG_KERNEL_MCS
-    tcb->tcbTimeSlice = CONFIG_TIME_SLICE;
-#endif
-
-    Arch_initContext(&tcb->tcbArch.tcbContext);
+    cap_t cap = create_rootserver_obj(seL4_TCBObject, seL4_CapInitThreadTCB, 1);
+    tcb_t *tcb = TCB_PTR(cap_thread_cap_get_capTCBPtr(cap));
 
     /* derive a copy of the IPC buffer cap for inserting */
     deriveCap_ret_t dc_ret = deriveCap(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadIPCBuffer), ipcbuf_cap);
@@ -472,17 +554,17 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
     cteInsert(
         root_cnode_cap,
         SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadCNode),
-        SLOT_PTR(rootserver.tcb, tcbCTable)
+        TCB_PTR_CTE_PTR(tcb, tcbCTable)
     );
     cteInsert(
         it_pd_cap,
         SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace),
-        SLOT_PTR(rootserver.tcb, tcbVTable)
+        TCB_PTR_CTE_PTR(tcb, tcbVTable)
     );
     cteInsert(
         dc_ret.cap,
         SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadIPCBuffer),
-        SLOT_PTR(rootserver.tcb, tcbBuffer)
+        TCB_PTR_CTE_PTR(tcb, tcbBuffer)
     );
     tcb->tcbIPCBuffer = ipcbuf_vptr;
 
@@ -516,10 +598,6 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
     SMP_COND_STATEMENT(tcb->tcbAffinity = 0);
 #endif
 
-    /* create initial thread's TCB cap */
-    cap_t cap = cap_thread_cap_new(TCB_REF(tcb));
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadTCB), cap);
-
 #ifdef CONFIG_KERNEL_MCS
     cap = cap_sched_context_cap_new(SC_REF(tcb->tcbSchedContext), seL4_MinSchedContextBits);
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadSC), cap);
@@ -527,7 +605,6 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
 #ifdef CONFIG_DEBUG_BUILD
     setThreadName(tcb, "rootserver");
 #endif
-
     return tcb;
 }
 
@@ -657,7 +734,10 @@ BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_
                                         seL4_SlotPos first_untyped_slot)
 {
     word_t     i;
+    word_t     pptr;
     region_t   reg;
+    cap_t      cap;
+    current_untyped = ndks_boot.slot_pos_cur;
 
     /* if boot_mem_reuse_reg is not empty, we can create UT objs from boot code/data frames */
     if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
@@ -672,6 +752,20 @@ BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_
             return false;
         }
     }
+
+    /* provide UT used by the intitial thread cnode */
+    cap = SLOT_PTR(dummy_cnode_mem, DUMMY_UNTYPED_SLOT)->cap;
+
+    i = ndks_boot.slot_pos_cur - first_untyped_slot;
+    pptr = cap_untyped_cap_get_capPtr(cap);
+    ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
+        pptr_to_paddr((void *)pptr), CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits, false, {0}
+    };
+
+    cteMove(cap,
+        SLOT_PTR(dummy_cnode_mem, DUMMY_UNTYPED_SLOT),
+        SLOT_PTR(rootserver.cnode, ndks_boot.slot_pos_cur));
+    ndks_boot.slot_pos_cur++;
 
     return true;
 }
@@ -808,8 +902,10 @@ BOOT_CODE void init_freemem(word_t n_available, const p_region_t *available,
 
     /* try to grab the last available p region to create the root server objects
      * from. If possible, retain any left over memory as an extra p region */
-    word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
+    word_t untyped_size = BIT(CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits);
     word_t max = rootserver_max_size_bits(extra_bi_size_bits);
+    word_t size = untyped_size + calculate_necessary_size(it_v_reg, extra_bi_size_bits);
+
     for (; i >= 0; i--) {
         word_t next = i + 1;
         pptr_t start = ROUND_DOWN(ndks_boot.freemem[i].end - size, max);

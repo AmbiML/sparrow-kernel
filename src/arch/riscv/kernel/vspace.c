@@ -236,15 +236,16 @@ BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
 }
 
 /* Create a page table for the initial thread */
-static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
+static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, vptr_t vptr, asid_t asid)
 {
     cap_t cap;
-    cap = cap_page_table_cap_new(
-              asid,   /* capPTMappedASID      */
-              pptr,   /* capPTBasePtr         */
-              1,      /* capPTIsMapped        */
-              vptr    /* capPTMappedAddress   */
-          );
+
+    cap = create_rootserver_obj(seL4_RISCV_PageTableObject, ndks_boot.slot_pos_cur, 1);
+    cap = cap_page_table_cap_set_capPTMappedASID(cap, asid);
+    cap = cap_page_table_cap_set_capPTIsMapped(cap, 1);
+    cap = cap_page_table_cap_set_capPTMappedAddress(cap, vptr);
+    SLOT_PTR(rootserver.cnode, ndks_boot.slot_pos_cur)->cap = cap;
+    ndks_boot.slot_pos_cur++;
 
     map_it_pt_cap(vspace_cap, cap);
     return cap;
@@ -266,18 +267,17 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     cap_t      lvl1pt_cap;
     vptr_t     pt_vptr;
 
-    copyGlobalMappings(PTE_PTR(rootserver.vspace));
+    lvl1pt_cap = create_rootserver_obj(seL4_RISCV_PageTableObject, seL4_CapInitThreadVSpace, seL4_VSpaceBits);
+    void* vspace = (void*)cap_get_capPtr(lvl1pt_cap);
 
-    lvl1pt_cap =
-        cap_page_table_cap_new(
-            IT_ASID,               /* capPTMappedASID    */
-            (word_t) rootserver.vspace,  /* capPTBasePtr       */
-            1,                     /* capPTIsMapped      */
-            (word_t) rootserver.vspace   /* capPTMappedAddress */
-        );
+    copyGlobalMappings(PTE_PTR(vspace));
+
+    lvl1pt_cap = cap_page_table_cap_set_capPTMappedASID(lvl1pt_cap, IT_ASID);
+    lvl1pt_cap = cap_page_table_cap_set_capPTIsMapped(lvl1pt_cap, 1);
+    lvl1pt_cap = cap_page_table_cap_set_capPTMappedAddress(lvl1pt_cap, cap_page_table_cap_get_capPTBasePtr(lvl1pt_cap));
+    SLOT_PTR(rootserver.cnode, seL4_CapInitThreadVSpace)->cap = lvl1pt_cap;
 
     seL4_SlotPos slot_pos_before = ndks_boot.slot_pos_cur;
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), lvl1pt_cap);
 
     /* create all n level PT caps necessary to cover userland image in 4KiB pages */
     for (int i = 0; i < CONFIG_PT_LEVELS - 1; i++) {
@@ -285,9 +285,10 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
         for (pt_vptr = ROUND_DOWN(it_v_reg.start, RISCV_GET_LVL_PGSIZE_BITS(i));
              pt_vptr < it_v_reg.end;
              pt_vptr += RISCV_GET_LVL_PGSIZE(i)) {
-            if (!provide_cap(root_cnode_cap,
-                             create_it_pt_cap(lvl1pt_cap, it_alloc_paging(), pt_vptr, IT_ASID))
-               ) {
+            if (!cap_capType_equals(
+                    create_it_pt_cap(lvl1pt_cap, pt_vptr, IT_ASID),
+                    cap_page_table_cap
+               )) {
                 return cap_null_cap_new();
             }
         }

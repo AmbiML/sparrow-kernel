@@ -41,12 +41,33 @@ BOOT_CODE static bool_t create_untypeds(cap_t root_cnode_cap, region_t boot_mem_
     create_device_untypeds(root_cnode_cap, slot_pos_before);
     bool_t res = create_kernel_untypeds(root_cnode_cap, boot_mem_reuse_reg, slot_pos_before);
 
+    // Reserve next slot for BSS untyped
+    ndks_boot.slot_pos_cur += 1;
+
     slot_pos_after = ndks_boot.slot_pos_cur;
+
     ndks_boot.bi_frame->untyped = (seL4_SlotRegion) {
         slot_pos_before, slot_pos_after
     };
     return res;
 
+}
+
+BOOT_CODE static bool_t create_bss_untyped(cap_t root_cnode_cap, region_t boot_mem_reuse_reg)
+{
+    seL4_SlotPos   first_untyped_slot;
+    seL4_SlotPos   slot_pos_copy;
+
+    first_untyped_slot = ndks_boot.bi_frame->untyped.start;
+    slot_pos_copy = ndks_boot.slot_pos_cur;
+    ndks_boot.slot_pos_cur = ndks_boot.bi_frame->untyped.end - 1;
+
+    if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
+        return false;
+    }
+
+    ndks_boot.slot_pos_cur = slot_pos_copy;
+    return true;
 }
 
 BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t
@@ -215,6 +236,7 @@ static BOOT_CODE bool_t try_init_kernel(
     vptr_t ipcbuf_vptr;
     create_frames_of_region_ret_t create_frames_ret;
     create_frames_of_region_ret_t extra_bi_ret;
+    region_t empty_region = {0};
 
     /* convert from physical addresses to userland vptrs */
     v_region_t ui_v_reg;
@@ -293,6 +315,13 @@ static BOOT_CODE bool_t try_init_kernel(
         *(seL4_BootInfoHeader *)(rootserver.extra_bi + extra_bi_offset) = header;
     }
 
+    /* make untyped memory avaiable */
+    if (!create_untypeds(
+            root_cnode_cap,
+            empty_region)) {
+        return false;
+    }
+
     /* Construct an initial address space with enough virtual addresses
      * to cover the user image + ipc buffer and bootinfo frames */
     it_pd_cap = create_it_address_space(root_cnode_cap, it_v_reg);
@@ -326,6 +355,7 @@ static BOOT_CODE bool_t try_init_kernel(
         }
         ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
     }
+
 
 #ifdef CONFIG_KERNEL_MCS
     init_sched_control(root_cnode_cap, CONFIG_MAX_NUM_NODES);
@@ -384,10 +414,8 @@ static BOOT_CODE bool_t try_init_kernel(
 
     init_core_state(initial);
 
-    /* convert the remaining free memory into UT objects and provide the caps */
-    if (!create_untypeds(
-            root_cnode_cap,
-            boot_mem_reuse_reg)) {
+    /* convert the BSS memory into UT objects and provide the caps */
+    if (!create_bss_untyped(root_cnode_cap, boot_mem_reuse_reg)) {
         return false;
     }
 
