@@ -41,6 +41,10 @@ exception_t decodeUntypedInvocation(word_t invLabel, word_t length, cte_t *slot,
     bool_t reset;
 
     /* Ensure operation is valid. */
+    if (invLabel == UntypedDescribe) {
+        return invokeUntyped_Describe(slot, cap, buffer);
+    }
+
     if (invLabel != UntypedRetype) {
         userError("Untyped cap: Illegal operation attempted.");
         current_syscall_error.type = seL4_IllegalOperation;
@@ -302,5 +306,26 @@ exception_t invokeUntyped_Retype(cte_t *srcSlot,
     createNewObjects(newType, srcSlot, destCNode, destOffset, destLength,
                      retypeBase, userSize, deviceMemory);
 
+    return EXCEPTION_NONE;
+}
+
+exception_t invokeUntyped_Describe(cte_t *slot, cap_t cap, word_t *buffer)
+{
+    exception_t status;
+    word_t untypedFreeBytes, sizeBits;
+    word_t freeIndex;
+
+    status = ensureNoChildren(slot);
+    if (status != EXCEPTION_NONE) {
+        freeIndex = cap_untyped_cap_get_capFreeIndex(cap);
+    } else {
+        freeIndex = 0;
+    }
+    untypedFreeBytes = BIT(cap_untyped_cap_get_capBlockSize(cap)) -
+                       FREE_INDEX_TO_OFFSET(freeIndex);
+    sizeBits = cap_untyped_cap_get_capBlockSize(cap);
+
+    setMR(NODE_STATE(ksCurThread), buffer, 0, untypedFreeBytes);
+    setMR(NODE_STATE(ksCurThread), buffer, 1, sizeBits);
     return EXCEPTION_NONE;
 }

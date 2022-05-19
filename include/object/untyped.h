@@ -34,3 +34,4 @@ exception_t invokeUntyped_Retype(cte_t *srcSlot, bool_t reset,
                                  void *retypeBase, object_t newType, word_t userSize,
                                  cte_t *destCNode, word_t destOffset, word_t destLength,
                                  bool_t deviceMemory);
+exception_t invokeUntyped_Describe(cte_t *slot, cap_t cap, word_t *buffer);

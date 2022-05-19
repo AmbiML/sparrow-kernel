@@ -50,6 +50,18 @@
                 description="Number of capabilities to create."/>
         </method>
 
+        <method id="UntypedDescribe" name="Describe" manual_name="Describe" manual_label="untyped_describe">
+            <brief>
+                Describes an untyped object
+            </brief>
+            <description>
+                Given a capability, <texttt text="_service"/>, to an untyped object,
+                returns basic informations about it.
+            </description>
+            <param dir="out" name="remainingBytes" type="seL4_Word" description="Remaining memory in bytes"/>
+            <param dir="out" name="sizeBits" type="seL4_Word" description="Size of the untyped object"/>
+        </method>
+
     </interface>
 
     <interface name="seL4_TCB" manual_name="TCB" cap_description="Capability to the TCB which is being operated on.">
