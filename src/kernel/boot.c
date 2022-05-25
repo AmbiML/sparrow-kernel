@@ -180,6 +180,10 @@ BOOT_CODE cap_t create_rootserver_obj(object_t objectType, word_t slot, word_t u
     }
     while ((untypedFreeBytes >> objectSize) < 1 && ++current_untyped);
 
+    // Mark untyped object as tainted by the kernel
+    word_t untyped_index = current_untyped - ndks_boot.bi_frame->untyped.start;
+    ndks_boot.bi_frame->untypedList[untyped_index].isTainted = true;
+
     word_t alignedFreeRef = alignUp_(freeRef, objectSize);
 
     createNewObjects(
@@ -646,7 +650,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
     word_t i = ndks_boot.slot_pos_cur - first_untyped_slot;
     if (i < CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
         ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-            pptr_to_paddr((void *)pptr), size_bits, device_memory, {0}
+            pptr_to_paddr((void *)pptr), size_bits, device_memory, false, {0}
         };
         ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
                                      device_memory, size_bits, pptr);
@@ -759,7 +763,7 @@ BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_
     i = ndks_boot.slot_pos_cur - first_untyped_slot;
     pptr = cap_untyped_cap_get_capPtr(cap);
     ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-        pptr_to_paddr((void *)pptr), CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits, false, {0}
+        pptr_to_paddr((void *)pptr), CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits, false, true, {0}
     };
 
     cteMove(cap,

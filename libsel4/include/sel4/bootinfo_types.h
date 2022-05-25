@@ -48,7 +48,8 @@ typedef struct seL4_UntypedDesc {
     seL4_Word  paddr;   /* physical address of untyped cap  */
     seL4_Uint8 sizeBits;/* size (2^n) bytes of each untyped */
     seL4_Uint8 isDevice;/* whether the untyped is a device  */
-    seL4_Uint8 padding[sizeof(seL4_Word) - 2 * sizeof(seL4_Uint8)];
+    seL4_Uint8 isTainted;/* whether the untyped was used by the kernel */
+    seL4_Uint8 padding[sizeof(seL4_Word) - 3 * sizeof(seL4_Uint8)];
 } seL4_UntypedDesc;
 
 typedef struct seL4_BootInfo {
