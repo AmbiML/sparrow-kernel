@@ -102,6 +102,19 @@ LIBSEL4_INLINE_FUNC seL4_Uint32
 seL4_DebugCapIdentify(seL4_CPtr cap);
 
 /**
+ * @xmlonly <manual name="Dump Cnode" label="sel4_debugdumpcnode"/> @endxmlonly
+ * @brief Outputs the contents of the specified CNode to the console.
+ *
+ * Dump a description of the non-mepty slots in the specifeid CNode to kernel serial output.
+ *
+ * @param cap A capability slot in the current cspace.
+ * @return A `seL4_Error` error if |cptr| is not a CNode.
+ *
+ */
+LIBSEL4_INLINE_FUNC seL4_Error
+seL4_DebugDumpCNode(seL4_CPtr cap);
+
+/**
  * @xmlonly <manual name="Name Thread" label="sel4_debugnamethread"/> @endxmlonly
  * @brief Name a thread.
  *

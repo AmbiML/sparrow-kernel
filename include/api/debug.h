@@ -134,3 +134,7 @@ static inline void debug_dumpScheduler(void)
 #endif /* CONFIG_PRINTING */
 #endif /* CONFIG_DEBUG_BUILD */
 
+#ifdef CONFIG_PRINTING
+extern void debug_dumpCNode(cte_t* cspace, word_t radix);
+#endif /* CONFIG_PRINTING */
+

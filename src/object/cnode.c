@@ -926,3 +926,135 @@ cap_transfer_t PURE loadCapTransfer(word_t *buffer)
     const int offset = seL4_MsgMaxLength + seL4_MsgMaxExtraCaps + 2;
     return capTransferFromWords(buffer + offset);
 }
+
+#ifdef CONFIG_PRINTING
+inline static char* cap_get_capName(cap_t cap)
+{
+#define CASE(CAP) \
+    case CAP: \
+        return #CAP;
+
+    switch(cap_get_capType(cap)) {
+        CASE(cap_null_cap)
+        CASE(cap_untyped_cap)
+        CASE(cap_endpoint_cap)
+        CASE(cap_notification_cap)
+        CASE(cap_reply_cap)
+        CASE(cap_cnode_cap)
+        CASE(cap_thread_cap)
+        CASE(cap_frame_cap)
+        CASE(cap_page_table_cap)
+        CASE(cap_asid_control_cap)
+        CASE(cap_asid_pool_cap)
+        CASE(cap_irq_control_cap)
+        CASE(cap_irq_handler_cap)
+        CASE(cap_zombie_cap)
+        CASE(cap_domain_cap)
+        CASE(cap_sched_context_cap)
+        CASE(cap_sched_control_cap)
+        default:
+            return "unknown cap";
+    }
+#undef CASE
+}
+
+static char* cap_get_capDescription(cte_t* cte)
+{
+    cap_t cap = cte->cap;
+    static char buffer[0x100] = {0};
+    switch(cap_get_capType(cap)) {
+        case cap_untyped_cap:
+            snprintf(buffer, 0x100, "%s (pptr=0x%x, size=%d)",
+                    cap_get_capName(cap),
+                    cap_untyped_cap_get_capPtr(cap),
+                    cap_untyped_cap_get_capBlockSize(cap));
+            break;
+        case cap_endpoint_cap:
+            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+                    cap_get_capName(cap),
+                    cap_endpoint_cap_get_capEPPtr(cap));
+            break;
+        case cap_notification_cap:
+            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+                    cap_get_capName(cap),
+                    cap_notification_cap_get_capNtfnPtr(cap));
+            break;
+        case cap_reply_cap:
+            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+                    cap_get_capName(cap),
+                    cap_reply_cap_get_capReplyPtr(cap));
+            break;
+        case cap_cnode_cap:
+            snprintf(buffer, 0x100, "%s (pptr=0x%x, radix=%d)",
+                    cap_get_capName(cap),
+                    cap_cnode_cap_get_capCNodePtr(cap),
+                    cap_cnode_cap_get_capCNodeRadix(cap));
+            break;
+        case cap_thread_cap:
+            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+                    cap_get_capName(cap),
+                    cap_thread_cap_get_capTCBPtr(cap));
+            break;
+        case cap_frame_cap:
+            snprintf(buffer, 0x100, "%s (pptr=0x%x, itasid=%d, ismapped=%d, mapped=0x%x, size=%d)",
+                    cap_get_capName(cap),
+                    cap_frame_cap_get_capFBasePtr(cap),
+                    cap_frame_cap_get_capFMappedASID(cap) == IT_ASID,
+                    cap_frame_cap_get_capFMappedASID(cap) != asidInvalid,
+                    cap_frame_cap_get_capFMappedAddress(cap),
+                    cap_frame_cap_get_capFSize(cap));
+            break;
+        // case cap_page_table_cap:
+        //     break
+        // case cap_asid_control_cap:
+        //     break
+        // case cap_asid_pool_cap:
+        //     break
+        // case cap_irq_control_cap:
+        //     break
+        // case cap_irq_handler_cap:
+        //     break
+        // case cap_zombie_cap:
+        //     break
+        // case cap_domain_cap:
+        //     break
+        // case cap_sched_context_cap:
+        //     break
+        // case cap_sched_control_cap:
+        //     break
+        default:
+            snprintf(buffer, 0x100, "%s", cap_get_capName(cap));
+    }
+    snprintf(buffer, 0x100, "%s [isFinal=%ld, isRevokable=%d]",
+            buffer,
+            isFinalCapability(cte),
+            mdb_node_get_mdbRevocable(cte->cteMDBNode));
+    return buffer;
+}
+
+void debug_dumpCNode(cte_t* cnode, word_t radix)
+{
+#define IN_CSPACE(SLOT) ((word_t)(SLOT) >= (word_t)cnode && (word_t)(SLOT) < (word_t)(&cnode[max_slot]))
+#define CSPACE_INDEX(SLOT) (((word_t)(SLOT) - (word_t)cnode) / sizeof(slot_t))
+    word_t max_slot = (1<<radix) - 1;
+    for (word_t slot = 0; slot <= max_slot; ++slot) {
+        cte_t *query = &cnode[slot];
+        if (cap_get_capType(query->cap) == cap_null_cap) {
+            continue;
+        }
+
+        printf("|- %03lx. %s -> ", slot, cap_get_capDescription(query));
+        for (query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode));
+            query && isMDBParentOf(&cnode[slot], query);
+            query = CTE_PTR(mdb_node_get_mdbNext(query->cteMDBNode))) {
+            if (!IN_CSPACE(query)) {
+                continue;
+            }
+            printf("%03lx. %s -> ", CSPACE_INDEX(query), cap_get_capDescription(query));
+        }
+        printf("null\n");
+    }
+#undef IN_CSPACE
+#undef CSPACE_INDEX
+}
+#endif /* CONFIG_PRINTING */

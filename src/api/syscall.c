@@ -79,7 +79,19 @@ exception_t handleUnknownSyscall(word_t w)
 #endif
         return EXCEPTION_NONE;
     }
-#endif
+    if (w == SysDebugDumpCNode) {
+        word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
+        lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+        if (cap_get_capType(lu_ret.cap) != cap_cnode_cap) {
+            userError("SysDebugDumpCNode: cap is not a CNode");
+            setRegister(NODE_STATE(ksCurThread), capRegister, seL4_InvalidCapability);
+            return EXCEPTION_SYSCALL_ERROR;
+        }
+        word_t radix = cap_cnode_cap_get_capCNodeRadix(lu_ret.cap);
+        debug_dumpCNode(CTE_PTR(cap_cnode_cap_get_capCNodePtr(lu_ret.cap)), radix);
+        return EXCEPTION_NONE;
+    }
+#endif /* CONFIG_PRINTING */
 #ifdef CONFIG_DEBUG_BUILD
     if (w == SysDebugHalt) {
         tcb_t *UNUSED tptr = NODE_STATE(ksCurThread);
