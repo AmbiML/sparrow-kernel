@@ -1,0 +1,5 @@
+---
+Language: Cpp
+# Don't format .cc,.c,.h files.
+DisableFormat: true
+---
