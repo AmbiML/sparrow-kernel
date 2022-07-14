@@ -13,7 +13,9 @@ if(KernelPlatformRocketchip)
     config_set(KernelRiscVPlatform RISCV_PLAT "rocketchip")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
-    list(APPEND KernelDTSList "tools/dts/rocketchip.dts")
+    list(
+        APPEND KernelDTSList "tools/dts/rocketchip.dts" "src/plat/rocketchip/overlay-rocketchip.dts"
+    )
     declare_default_headers(
         TIMER_FREQUENCY 10000000llu PLIC_MAX_NUM_INT 0
         INTERRUPT_CONTROLLER arch/machine/plic.h
