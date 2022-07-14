@@ -71,6 +71,12 @@ SECTIONS
         *(.data)
     }
 
+    /* The kernel's idle thread section contains no code or data. */
+    ._idle_thread . (NOLOAD): AT(ADDR(._idle_thread) - KERNEL_OFFSET)
+    {
+        *(._idle_thread)
+    }
+
     .bss . : AT(ADDR(.bss) - KERNEL_OFFSET)
     {
         *(.bss)
