@@ -59,7 +59,7 @@ SECTIONS
         *(.data)
     }
 
-    .bss . : AT(ADDR(.bss) - KERNEL_OFFSET)
+    .bss . (NOLOAD): AT(ADDR(.bss) - KERNEL_OFFSET)
     {
         *(.bss)
 

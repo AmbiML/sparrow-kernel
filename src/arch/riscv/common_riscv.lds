@@ -77,7 +77,7 @@ SECTIONS
         *(._idle_thread)
     }
 
-    .bss . : AT(ADDR(.bss) - KERNEL_OFFSET)
+    .bss . (NOLOAD): AT(ADDR(.bss) - KERNEL_OFFSET)
     {
         *(.bss)
         *(.sbss)
