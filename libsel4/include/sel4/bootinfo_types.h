@@ -66,6 +66,7 @@ typedef struct seL4_BootInfo {
     seL4_SlotRegion   extraBIPages;    /* caps for any pages used to back the additional bootinfo information */
     seL4_Word         initThreadCNodeSizeBits; /* initial thread's root CNode size (2^n slots) */
     seL4_Domain       initThreadDomain; /* Initial thread's domain ID */
+    seL4_Word         kernelReservedBytes; /* Kernel memory footprint (bytes) */
 #ifdef CONFIG_KERNEL_MCS
     seL4_SlotRegion   schedcontrol; /* Caps to sched_control for each node */
 #endif

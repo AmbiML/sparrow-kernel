@@ -185,7 +185,9 @@ BOOT_CODE bool_t init_sys_state(
     tsc_freq = tsc_init();
 
     /* populate the bootinfo frame */
-    populate_bi_frame(0, ksNumCPUs, ipcbuf_vptr, extra_bi_size);
+    populate_bi_frame(0, ksNumCPUs, ipcbuf_vptr, extra_bi_size,
+                      (kpptr_to_paddr(ki_end) - KERNEL_ELF_PADDR_BASE)
+                      + (boot_mem_reuse_reg.end - boot_mem_reuse_reg.start));
     region_t extra_bi_region = {
         .start = rootserver.extra_bi,
         .end = rootserver.extra_bi + BIT(extra_bi_size_bits)

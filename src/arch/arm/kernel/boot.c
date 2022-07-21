@@ -399,7 +399,10 @@ static BOOT_CODE bool_t try_init_kernel(
     /* initialise the SMMU and provide the SMMU control caps*/
     init_smmu(root_cnode_cap);
 #endif
-    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size);
+    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size,
+                      ((pptr_t)ki_end - (pptr_t)ki_boot_end)
+                      + (dtb_reg.end - dtb_reg.start)
+                      + (mode_reserved_region[0].end - mode_reserved_region[0].start));
 
     /* put DTB in the bootinfo block, if present. */
     seL4_BootInfoHeader header;

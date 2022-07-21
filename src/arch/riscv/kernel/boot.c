@@ -294,7 +294,9 @@ static BOOT_CODE bool_t try_init_kernel(
     init_irqs(root_cnode_cap);
 
     /* create the bootinfo frame */
-    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size);
+    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size,
+                      (kpptr_to_paddr((void *)ki_end) - kpptr_to_paddr((void *)ki_boot_end))
+                      + (dtb_reg.end - dtb_reg.start));
 
     /* put DTB in the bootinfo block, if present. */
     seL4_BootInfoHeader header;

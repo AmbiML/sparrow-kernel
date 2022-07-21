@@ -401,7 +401,7 @@ BOOT_CODE word_t calculate_extra_bi_size_bits(word_t extra_size)
 }
 
 BOOT_CODE void populate_bi_frame(node_id_t node_id, word_t num_nodes, vptr_t ipcbuf_vptr,
-                                 word_t extra_bi_size)
+                                 word_t extra_bi_size, word_t kernel_reserved)
 {
     clearMemory((void *) rootserver.boot_info, BI_FRAME_SIZE_BITS);
     if (extra_bi_size) {
@@ -418,6 +418,7 @@ BOOT_CODE void populate_bi_frame(node_id_t node_id, word_t num_nodes, vptr_t ipc
     BI_PTR(rootserver.boot_info)->initThreadCNodeSizeBits = CONFIG_ROOT_CNODE_SIZE_BITS;
     BI_PTR(rootserver.boot_info)->initThreadDomain = ksDomSchedule[ksDomScheduleIdx].domain;
     BI_PTR(rootserver.boot_info)->extraLen = extra_bi_size;
+    BI_PTR(rootserver.boot_info)->kernelReservedBytes = kernel_reserved;
 }
 
 BOOT_CODE bool_t provide_cap(cap_t root_cnode_cap, cap_t cap)
