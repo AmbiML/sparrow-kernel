@@ -32,14 +32,14 @@ BOOT_BSS static volatile word_t node_boot_lock;
 #define MAX_RESERVED 3
 BOOT_BSS static region_t res_reg[MAX_RESERVED];
 
-BOOT_CODE static bool_t create_untypeds(cap_t root_cnode_cap, region_t boot_mem_reuse_reg)
+BOOT_CODE static bool_t create_untypeds(cap_t root_cnode_cap, region_t boot_mem_reuse_reg, region_t ui_reg)
 {
     seL4_SlotPos   slot_pos_before;
     seL4_SlotPos   slot_pos_after;
 
     slot_pos_before = ndks_boot.slot_pos_cur;
     create_device_untypeds(root_cnode_cap, slot_pos_before);
-    bool_t res = create_kernel_untypeds(root_cnode_cap, boot_mem_reuse_reg, slot_pos_before);
+    bool_t res = create_kernel_untypeds(root_cnode_cap, boot_mem_reuse_reg, ui_reg, slot_pos_before);
 
     // Reserve next slot for BSS untyped
     ndks_boot.slot_pos_cur += 1;
@@ -62,7 +62,7 @@ BOOT_CODE static bool_t create_bss_untyped(cap_t root_cnode_cap, region_t boot_m
     slot_pos_copy = ndks_boot.slot_pos_cur;
     ndks_boot.slot_pos_cur = ndks_boot.bi_frame->untyped.end - 1;
 
-    if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
+    if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, false, first_untyped_slot)) {
         return false;
     }
 
@@ -318,7 +318,8 @@ static BOOT_CODE bool_t try_init_kernel(
     /* make untyped memory avaiable */
     if (!create_untypeds(
             root_cnode_cap,
-            empty_region)) {
+            empty_region,
+            ui_reg)) {
         return false;
     }
 

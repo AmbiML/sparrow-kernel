@@ -642,6 +642,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
     bool_t     device_memory,
     pptr_t     pptr,
     word_t     size_bits,
+    bool_t     tainted,
     seL4_SlotPos first_untyped_slot
 )
 {
@@ -650,7 +651,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
     word_t i = ndks_boot.slot_pos_cur - first_untyped_slot;
     if (i < CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
         ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-            pptr_to_paddr((void *)pptr), size_bits, device_memory, false, {0}
+            pptr_to_paddr((void *)pptr), size_bits, device_memory, tainted, {0}
         };
         ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
                                      device_memory, size_bits, pptr);
@@ -666,6 +667,7 @@ BOOT_CODE bool_t create_untypeds_for_region(
     cap_t      root_cnode_cap,
     bool_t     device_memory,
     region_t   reg,
+    bool_t     tainted,
     seL4_SlotPos first_untyped_slot
 )
 {
@@ -691,7 +693,7 @@ BOOT_CODE bool_t create_untypeds_for_region(
         }
 
         if (size_bits >= seL4_MinUntypedBits) {
-            if (!provide_untyped_cap(root_cnode_cap, device_memory, reg.start, size_bits, first_untyped_slot)) {
+            if (!provide_untyped_cap(root_cnode_cap, device_memory, reg.start, size_bits, tainted, first_untyped_slot)) {
                 return false;
             }
         }
@@ -708,7 +710,7 @@ BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_
             region_t reg = paddr_to_pptr_reg((p_region_t) {
                 start, ndks_boot.reserved[i].start
             });
-            if (!create_untypeds_for_region(root_cnode_cap, true, reg, slot_pos_before)) {
+            if (!create_untypeds_for_region(root_cnode_cap, true, reg, false, slot_pos_before)) {
                 return false;
             }
         }
@@ -727,7 +729,7 @@ BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_
         if (reg.end > PPTR_TOP) {
             reg.end = PPTR_TOP;
         }
-        if (!create_untypeds_for_region(root_cnode_cap, true, reg, slot_pos_before)) {
+        if (!create_untypeds_for_region(root_cnode_cap, true, reg, false, slot_pos_before)) {
             return false;
         }
     }
@@ -735,24 +737,30 @@ BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_
 }
 
 BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_reuse_reg,
-                                        seL4_SlotPos first_untyped_slot)
+                                        region_t ui_reg, seL4_SlotPos first_untyped_slot)
 {
     word_t     i;
     word_t     pptr;
     region_t   reg;
     cap_t      cap;
-    current_untyped = ndks_boot.slot_pos_cur;
 
     /* if boot_mem_reuse_reg is not empty, we can create UT objs from boot code/data frames */
-    if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
+    if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, false, first_untyped_slot)) {
         return false;
     }
+
+    /* if ui_reg is not empty, we can create UT objs from rootserver's binary */
+    if (!create_untypeds_for_region(root_cnode_cap, false, ui_reg, true, first_untyped_slot)) {
+        return false;
+    }
+
+    current_untyped = ndks_boot.slot_pos_cur;
 
     /* convert remaining freemem into UT objects and provide the caps */
     for (i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
         reg = ndks_boot.freemem[i];
         ndks_boot.freemem[i] = REG_EMPTY;
-        if (!create_untypeds_for_region(root_cnode_cap, false, reg, first_untyped_slot)) {
+        if (!create_untypeds_for_region(root_cnode_cap, false, reg, false, first_untyped_slot)) {
             return false;
         }
     }
