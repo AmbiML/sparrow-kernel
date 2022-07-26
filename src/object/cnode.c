@@ -950,8 +950,10 @@ inline static char* cap_get_capName(cap_t cap)
         CASE(cap_irq_handler_cap)
         CASE(cap_zombie_cap)
         CASE(cap_domain_cap)
+#ifdef CONFIG_KERNEL_MCS
         CASE(cap_sched_context_cap)
         CASE(cap_sched_control_cap)
+#endif
         default:
             return "unknown cap";
     }
@@ -964,45 +966,49 @@ static char* cap_get_capDescription(cte_t* cte)
     static char buffer[0x100] = {0};
     switch(cap_get_capType(cap)) {
         case cap_untyped_cap:
-            snprintf(buffer, 0x100, "%s (pptr=0x%x, size=%d)",
+            snprintf(buffer, 0x100, "%s (pptr=0x%p, size=%ld)",
                     cap_get_capName(cap),
-                    cap_untyped_cap_get_capPtr(cap),
-                    cap_untyped_cap_get_capBlockSize(cap));
+                    (void*)cap_untyped_cap_get_capPtr(cap),
+                    (unsigned long)cap_untyped_cap_get_capBlockSize(cap));
             break;
         case cap_endpoint_cap:
-            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+            snprintf(buffer, 0x100, "%s (pptr=0x%p)",
                     cap_get_capName(cap),
-                    cap_endpoint_cap_get_capEPPtr(cap));
+                    (void*)cap_endpoint_cap_get_capEPPtr(cap));
             break;
         case cap_notification_cap:
-            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+            snprintf(buffer, 0x100, "%s (pptr=0x%p)",
                     cap_get_capName(cap),
-                    cap_notification_cap_get_capNtfnPtr(cap));
+                    (void*)cap_notification_cap_get_capNtfnPtr(cap));
             break;
         case cap_reply_cap:
-            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+            snprintf(buffer, 0x100, "%s (pptr=0x%p)",
                     cap_get_capName(cap),
-                    cap_reply_cap_get_capReplyPtr(cap));
+#ifdef CONFIG_KERNEL_MCS
+                    (void*)cap_reply_cap_get_capReplyPtr(cap));
+#else
+                    (void*)cap_reply_cap_get_capReplyMaster(cap));
+#endif
             break;
         case cap_cnode_cap:
-            snprintf(buffer, 0x100, "%s (pptr=0x%x, radix=%d)",
+            snprintf(buffer, 0x100, "%s (pptr=0x%p, radix=%ld)",
                     cap_get_capName(cap),
-                    cap_cnode_cap_get_capCNodePtr(cap),
-                    cap_cnode_cap_get_capCNodeRadix(cap));
+                    (void*)cap_cnode_cap_get_capCNodePtr(cap),
+                    (unsigned long)cap_cnode_cap_get_capCNodeRadix(cap));
             break;
         case cap_thread_cap:
-            snprintf(buffer, 0x100, "%s (pptr=0x%x)",
+            snprintf(buffer, 0x100, "%s (pptr=0x%p)",
                     cap_get_capName(cap),
-                    cap_thread_cap_get_capTCBPtr(cap));
+                    (void*)cap_thread_cap_get_capTCBPtr(cap));
             break;
         case cap_frame_cap:
-            snprintf(buffer, 0x100, "%s (pptr=0x%x, itasid=%d, ismapped=%d, mapped=0x%x, size=%d)",
+            snprintf(buffer, 0x100, "%s (pptr=0x%p, itasid=%d, ismapped=%d, mapped=0x%lx, size=%ld)",
                     cap_get_capName(cap),
-                    cap_frame_cap_get_capFBasePtr(cap),
+                    (void*)cap_frame_cap_get_capFBasePtr(cap),
                     cap_frame_cap_get_capFMappedASID(cap) == IT_ASID,
                     cap_frame_cap_get_capFMappedASID(cap) != asidInvalid,
-                    cap_frame_cap_get_capFMappedAddress(cap),
-                    cap_frame_cap_get_capFSize(cap));
+                    (unsigned long)cap_frame_cap_get_capFMappedAddress(cap),
+                    (unsigned long)cap_frame_cap_get_capFSize(cap));
             break;
         // case cap_page_table_cap:
         //     break
@@ -1025,10 +1031,10 @@ static char* cap_get_capDescription(cte_t* cte)
         default:
             snprintf(buffer, 0x100, "%s", cap_get_capName(cap));
     }
-    snprintf(buffer, 0x100, "%s [isFinal=%ld, isRevokable=%d]",
+    snprintf(buffer, 0x100, "%s [isFinal=%ld, isRevokable=%ld]",
             buffer,
-            isFinalCapability(cte),
-            mdb_node_get_mdbRevocable(cte->cteMDBNode));
+            (unsigned long)isFinalCapability(cte),
+            (unsigned long)mdb_node_get_mdbRevocable(cte->cteMDBNode));
     return buffer;
 }
 
