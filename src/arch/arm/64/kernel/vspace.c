@@ -384,15 +384,16 @@ static BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
                                  );
 }
 
-static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
+static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, vptr_t vptr, asid_t asid)
 {
     cap_t cap;
-    cap = cap_page_table_cap_new(
-              asid,                   /* capPTMappedASID */
-              pptr,                   /* capPTBasePtr */
-              1,                      /* capPTIsMapped */
-              vptr                    /* capPTMappedAddress */
-          );
+    cap = create_rootserver_obj(seL4_ARM_PageTableObject, ndks_boot.slot_pos_cur, 1);
+    cap = cap_page_table_cap_set_capPTMappedASID(cap, asid);
+    cap = cap_page_table_cap_set_capPTIsMapped(cap, 1);
+    cap = cap_page_table_cap_set_capPTMappedAddress(cap, vptr);
+    SLOT_PTR(rootserver.cnode, ndks_boot.slot_pos_cur)->cap = cap;
+    ndks_boot.slot_pos_cur++;
+
     map_it_pt_cap(vspace_cap, cap);
     return cap;
 }
@@ -418,15 +419,16 @@ static BOOT_CODE void map_it_pd_cap(cap_t vspace_cap, cap_t pd_cap)
                                     );
 }
 
-static BOOT_CODE cap_t create_it_pd_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
+static BOOT_CODE cap_t create_it_pd_cap(cap_t vspace_cap, vptr_t vptr, asid_t asid)
 {
     cap_t cap;
-    cap = cap_page_directory_cap_new(
-              asid,                   /* capPDMappedASID */
-              pptr,                   /* capPDBasePtr */
-              1,                      /* capPDIsMapped */
-              vptr                    /* capPDMappedAddress */
-          );
+    cap = create_rootserver_obj(seL4_ARM_PageDirectoryObject, ndks_boot.slot_pos_cur, 1);
+    cap = cap_page_directory_cap_set_capPDMappedASID(cap, asid);
+    cap = cap_page_directory_cap_set_capPDIsMapped(cap, 1);
+    cap = cap_page_directory_cap_set_capPDMappedAddress(cap, vptr);
+    SLOT_PTR(rootserver.cnode, ndks_boot.slot_pos_cur)->cap = cap;
+    ndks_boot.slot_pos_cur++;
+
     map_it_pd_cap(vspace_cap, cap);
     return cap;
 }
@@ -444,15 +446,16 @@ static BOOT_CODE void map_it_pud_cap(cap_t vspace_cap, cap_t pud_cap)
                                        pptr_to_paddr(pud));
 }
 
-static BOOT_CODE cap_t create_it_pud_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
+static BOOT_CODE cap_t create_it_pud_cap(cap_t vspace_cap, vptr_t vptr, asid_t asid)
 {
     cap_t cap;
-    cap = cap_page_upper_directory_cap_new(
-              asid,               /* capPUDMappedASID */
-              pptr,               /* capPUDBasePtr */
-              1,                  /* capPUDIsMapped */
-              vptr                /* capPUDMappedAddress */
-          );
+    cap = create_rootserver_obj(seL4_ARM_PageUpperDirectoryObject, ndks_boot.slot_pos_cur, 1);
+    cap = cap_page_upper_directory_cap_set_capPUDMappedASID(cap, asid);
+    cap = cap_page_upper_directory_cap_set_capPUDIsMapped(cap, 1);
+    cap = cap_page_upper_directory_cap_set_capPUDMappedAddress(cap, vptr);
+    SLOT_PTR(rootserver.cnode, ndks_boot.slot_pos_cur)->cap = cap;
+    ndks_boot.slot_pos_cur++;
+
     map_it_pud_cap(vspace_cap, cap);
     return cap;
 }
@@ -475,21 +478,31 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     seL4_SlotPos slot_pos_after;
 
     /* create the PGD */
-    vspace_cap = cap_vtable_cap_new(
-                     IT_ASID,        /* capPGDMappedASID */
-                     rootserver.vspace, /* capPGDBasePtr   */
-                     1               /* capPGDIsMapped   */
-                 );
+    vspace_cap = create_rootserver_obj(
+        seL4_ARM_PageGlobalDirectoryObject,
+        seL4_CapInitThreadVSpace,
+        seL4_VSpaceBits
+    );
+    void* vspace = (void*)cap_get_capPtr(vspace_cap);
+
+    vspace_cap = cap_page_global_directory_cap_set_capPGDMappedASID(vspace_cap, IT_ASID);
+    vspace_cap = cap_page_global_directory_cap_set_capPGDIsMapped(vspace_cap, 1);
+    vspace_cap = cap_page_global_directory_cap_set_capPGDBasePtr(vspace_cap, (unsigned long)vspace);
+
+    SLOT_PTR(rootserver.cnode, seL4_CapInitThreadVSpace)->cap = vspace_cap;
+
     slot_pos_before = ndks_boot.slot_pos_cur;
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), vspace_cap);
 
 #ifndef AARCH64_VSPACE_S2_START_L1
     /* Create any PUDs needed for the user land image */
     for (vptr = ROUND_DOWN(it_v_reg.start, PGD_INDEX_OFFSET);
          vptr < it_v_reg.end;
          vptr += BIT(PGD_INDEX_OFFSET)) {
-        if (!provide_cap(root_cnode_cap, create_it_pud_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))) {
-            return cap_null_cap_new();
+        if (!cap_capType_equals(
+                create_it_pud_cap(vspace_cap, vptr, IT_ASID),
+                cap_page_upper_directory_cap
+            )) {
+              return cap_null_cap_new();
         }
     }
 #endif
@@ -497,8 +510,11 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     for (vptr = ROUND_DOWN(it_v_reg.start, PUD_INDEX_OFFSET);
          vptr < it_v_reg.end;
          vptr += BIT(PUD_INDEX_OFFSET)) {
-        if (!provide_cap(root_cnode_cap, create_it_pd_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))) {
-            return cap_null_cap_new();
+        if (!cap_capType_equals(
+              create_it_pd_cap(vspace_cap, vptr, IT_ASID),
+              cap_page_directory_cap
+            )) {
+              return cap_null_cap_new();
         }
     }
 
@@ -506,8 +522,11 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     for (vptr = ROUND_DOWN(it_v_reg.start, PD_INDEX_OFFSET);
          vptr < it_v_reg.end;
          vptr += BIT(PD_INDEX_OFFSET)) {
-        if (!provide_cap(root_cnode_cap, create_it_pt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))) {
-            return cap_null_cap_new();
+        if (!cap_capType_equals(
+              create_it_pt_cap(vspace_cap, vptr, IT_ASID),
+              cap_page_table_cap
+            )) {
+              return cap_null_cap_new();
         }
     }
 
