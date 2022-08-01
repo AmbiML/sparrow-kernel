@@ -536,7 +536,10 @@ cap_t createObject(object_t t, void *regionBase, word_t userSize, bool_t deviceM
 #endif
 #ifdef CONFIG_DEBUG_BUILD
         strlcpy(TCB_PTR_DEBUG_PTR(tcb)->tcbName, "child of: '", TCB_NAME_LENGTH);
-        strlcat(TCB_PTR_DEBUG_PTR(tcb)->tcbName, TCB_PTR_DEBUG_PTR(NODE_STATE(ksCurThread))->tcbName, TCB_NAME_LENGTH);
+        strlcat(TCB_PTR_DEBUG_PTR(tcb)->tcbName,
+            NODE_STATE(ksCurThread) ?
+                TCB_PTR_DEBUG_PTR(NODE_STATE(ksCurThread))->tcbName : "",
+            TCB_NAME_LENGTH);
         strlcat(TCB_PTR_DEBUG_PTR(tcb)->tcbName, "'", TCB_NAME_LENGTH);
         tcbDebugAppend(tcb);
 #endif /* CONFIG_DEBUG_BUILD */
