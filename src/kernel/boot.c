@@ -180,6 +180,15 @@ BOOT_CODE cap_t create_rootserver_obj(object_t objectType, word_t slot, word_t u
     }
     while ((untypedFreeBytes >> objectSize) < 1 && ++current_untyped);
 
+    if (freeIndex == 0)
+    {
+        // We are allocating from the begining of the untyped object,
+        // clear the underlying memory.
+        void *regionBase = WORD_PTR(cap_untyped_cap_get_capPtr(untyped));
+        word_t sizeBits = cap_untyped_cap_get_capBlockSize(untyped);
+        clearMemory(regionBase, sizeBits);
+    }
+
     // Mark untyped object as tainted by the kernel
     word_t untyped_index = current_untyped - ndks_boot.bi_frame->untyped.start;
     ndks_boot.bi_frame->untypedList[untyped_index].isTainted = true;
