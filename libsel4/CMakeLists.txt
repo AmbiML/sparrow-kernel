@@ -178,6 +178,22 @@ add_custom_target(
 
 add_library(sel4 src/sel4_bootinfo.c)
 target_link_libraries(sel4 PRIVATE kernel_Config sel4_Config sel4_autoconf)
+
+if(LibSel4ExternalLibrary)
+    set(LibSel4KernelPath ${CMAKE_CURRENT_SOURCE_DIR}/..)
+    set(LibSel4KernelOutputPath ${CMAKE_BINARY_DIR}/kernel)
+    add_subdirectory(${LibSel4ExternalLibrary} sel4_external_project)
+    target_link_libraries(
+        sel4
+        PUBLIC
+            -Wl,--whole-archive,--allow-multiple-definition
+            ${LibSel4ExternalLibraryPath}
+            -Wl,--no-whole-archive
+    )
+    add_dependencies(sel4_external kernel_Config)
+    add_dependencies(sel4 sel4_external)
+endif()
+
 target_include_directories(
     sel4
     PUBLIC
