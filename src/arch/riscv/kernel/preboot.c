@@ -37,8 +37,8 @@
 #define MIP_STIP (1 << IRQ_S_TIMER)
 #define MIP_SEIP (1 << IRQ_S_EXT)
 
-// The hardware mailbox queue. The bootloader will deposit info about the Kata
-// root app here before booting seL4.
+// The hardware mailbox queue. The bootloader will deposit info about the
+// Cantrip root app here before booting seL4.
 
 typedef struct {
   uint32_t INTR_STATE;  // R/W1C

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(sparrow KernelPlatformSparrow PLAT_SHODAN KernelArchRiscV)
+declare_platform(sparrow KernelPlatformSparrow PLAT_SPARROW KernelArchRiscV)
 
 if(KernelPlatformSparrow)
     declare_seL4_arch(riscv32)
