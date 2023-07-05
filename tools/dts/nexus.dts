@@ -5,8 +5,8 @@
 / {
   #address-cells = <1>;
   #size-cells = <1>;
-  compatible = "google,sparrow0";
-  model = "google,sparrow0";
+  compatible = "google,nexus0";
+  model = "google,nexus0";
 
   chosen {
     // seL4 requires including devices that it should memory map here.
