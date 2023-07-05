@@ -1,0 +1,89 @@
+// DeviceTree for the Sparrow SMC
+
+/dts-v1/;
+
+/ {
+  #address-cells = <1>;
+  #size-cells = <1>;
+  compatible = "google,sparrow0";
+  model = "google,sparrow0";
+
+  chosen {
+    // seL4 requires including devices that it should memory map here.
+    seL4,kernel-devices =
+        &{/soc/interrupt-controller@60000000};
+    // (The timer is deliberately not here, since having more than one 4MB
+    // range containing kernel devices causes an overflow beyond the end of
+    // virtual address space when mapping them.)
+  };
+
+  cpus {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    cpu0: cpu@0 {
+      device_type = "cpu";
+      reg = <0>;
+      compatible = "riscv";
+      riscv,isa = "rv32imac";
+      mmu-type = "riscv,sv39";
+      status = "okay";
+
+      cpu0_intc: interrupt-controller {
+        #interrupt-cells = <1>;
+        compatible = "riscv,cpu-intc";
+        interrupt-controller;
+        phandle = <0x0f>;
+      };
+    };
+  };
+
+  memory@28000000 {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    device_type = "memory";
+    reg = <0x28000000 0x400000>;
+  };
+
+  soc {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    compatible = "simple-bus";
+    ranges;
+    timer@50010000 {
+      compatible = "lowrisc,timer";
+      clock-frequency = < 24000000 >;
+      reg = < 0x50010000 0x1000 >;
+      interrupt-parent = <&cpu0_intc>;
+      interrupts = <5>;
+      interrupts-extended = <&cpu0_intc 5>;
+    };
+    timersw@50030000 {
+      compatible = "lowrisc,timer";
+      clock-frequency = < 24000000 >;
+      reg = < 0x50030000 0x1000 >;
+      interrupt-parent = <&plic0>;
+      // Placeholder interrupt number, not represented in top_matcha.h.
+      interrupts = <31>;
+      interrupts-extended = <&plic0 31>;
+    };
+    plic0: interrupt-controller@60000000 { // TOP_MATCHA_RV_PLIC_SMC_BASE_ADDR @ top_matcha.h
+      #interrupt-cells = <1>;
+      compatible = "riscv,plic0";
+      reg = <0x60000000 0x8000000>; // TOP_MATCHA_RV_PLIC_SMC_SIZE_BYTES @ top_matcha.h
+      interrupt-controller;
+      interrupt-parent = <&cpu0_intc>;
+      interrupts = <9>, <11>;
+      interrupts-extended = <&cpu0_intc 9>, <&cpu0_intc 11>;
+      riscv,ndev = <32>; // Must be >= kTopMatchaPlicIrqIdLastSmc @ top_matcha.h
+      riscv,max-priority = <0x07>;
+    };
+    uart0: serial@50000000 {
+      compatible = "lowrisc,uart";
+      reg = <50000000 0x1000>;
+      interrupt-parent = <&plic0>;
+      interrupts = <1>, <2>, <3>, <4>, <5>, <6>, <7>, <8>;
+      interrupts-extended = <&plic0 1>, <&plic0 2>, <&plic0 3>,
+          <&plic0 4>, <&plic0 5>, <&plic0 6>, <&plic0 7>, <&plic0 8>;
+    };
+  };
+};
