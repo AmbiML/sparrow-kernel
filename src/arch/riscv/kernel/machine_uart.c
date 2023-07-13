@@ -8,7 +8,15 @@
 
 // Machine-mode uart putchar + trivial printf for debugging.
 
+#ifdef CONFIG_PLAT_NEXUS
+#define UART0_BASE_ADDR 0x54000000
+#define MACHINE_UART_CLK_HZ (25ull * 1000 * 1000)
+#elif CONFIG_PLAT_SPARROW
 #define UART0_BASE_ADDR 0x50000000
+#define MACHINE_UART_CLK_HZ (48ull * 1000 * 1000)
+#else
+#error "Unknown platform config"
+#endif
 
 // Register definitions copied from opentitan/uart.h
 //
@@ -39,7 +47,6 @@
   ((value & UART_##regname##_MASK) << UART_##regname##_OFFSET)
 
 #define MACHINE_UART_BAUD 115200ull
-#define MACHINE_UART_CLK_HZ (48ull * 1000 * 1000)
 
 void machine_init_uart(void) {
   uint64_t ctrl_nco = ((uint64_t)MACHINE_UART_BAUD << 20) / MACHINE_UART_CLK_HZ;

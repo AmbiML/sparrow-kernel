@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(nexus KernelPlatformSparrow PLAT_SPARROW KernelArchRiscV)
+declare_platform(nexus KernelPlatformNexus PLAT_NEXUS KernelArchRiscV)
 
-if(KernelPlatformSparrow)
+if(KernelPlatformNexus)
     declare_seL4_arch(riscv32)
     config_set(KernelRiscVPlatform RISCV_PLAT "nexus")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 1)
@@ -17,7 +17,7 @@ if(KernelPlatformSparrow)
         # implementing that, this can be set to any desired value, but until
         # then it needs to be set to the rate at which the value returned by
         # cpu1 rdtime is incremented.
-        TIMER_FREQUENCY 24000000
+        TIMER_FREQUENCY 2500000
 
         INTERRUPT_CONTROLLER drivers/irq/smc_plic.h
         # Must be >= kTopMatchaPlicIrqIdLastSmc in top_matcha.h

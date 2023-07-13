@@ -37,11 +37,11 @@
     };
   };
 
-  memory@28000000 {
+  memory@50000000 {
     #address-cells = <1>;
     #size-cells = <1>;
     device_type = "memory";
-    reg = <0x28000000 0x400000>;
+    reg = <0x50000000 0x380000>;
   };
 
   soc {
@@ -49,18 +49,18 @@
     #size-cells = <1>;
     compatible = "simple-bus";
     ranges;
-    timer@50010000 {
+    timer@54010000 {
       compatible = "lowrisc,timer";
-      clock-frequency = < 24000000 >;
-      reg = < 0x50010000 0x1000 >;
+      clock-frequency = < 2500000 >;
+      reg = < 0x54010000 0x1000 >;
       interrupt-parent = <&cpu0_intc>;
       interrupts = <5>;
       interrupts-extended = <&cpu0_intc 5>;
     };
-    timersw@50030000 {
+    timersw@54011000 {
       compatible = "lowrisc,timer";
-      clock-frequency = < 24000000 >;
-      reg = < 0x50030000 0x1000 >;
+      clock-frequency = < 2500000 >;
+      reg = < 0x54011000 0x1000 >;
       interrupt-parent = <&plic0>;
       // Placeholder interrupt number, not represented in top_matcha.h.
       interrupts = <31>;
@@ -77,9 +77,9 @@
       riscv,ndev = <32>; // Must be >= kTopMatchaPlicIrqIdLastSmc @ top_matcha.h
       riscv,max-priority = <0x07>;
     };
-    uart0: serial@50000000 {
+    uart0: serial@54000000 {
       compatible = "lowrisc,uart";
-      reg = <50000000 0x1000>;
+      reg = <54000000 0x1000>;
       interrupt-parent = <&plic0>;
       interrupts = <1>, <2>, <3>, <4>, <5>, <6>, <7>, <8>;
       interrupts-extended = <&plic0 1>, <&plic0 2>, <&plic0 3>,
