@@ -17,7 +17,7 @@ uint32_t machine_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
 // INTERRUPT HANDLER. It's just enough to handle calls to SBI_SET_TIMER and
 // SBI_CONSOLE_PUTCHAR. More functionality can be added as needed.
 
-__attribute__((naked, aligned(4))) void machine_vector_table() {
+__attribute__((naked, aligned(256))) void machine_vector_table() {
   asm volatile(
       ".option push       \n"
       ".option norvc      \n"
@@ -84,6 +84,10 @@ __attribute__((naked)) void machine_isr_wrapper() {
       "csrr t0, mepc           \n"
       "addi t0, t0, 4          \n"
       "csrw mepc, t0           \n"
+#if defined(CONFIG_PLAT_NEXUS)
+      // Setup a0 so machine_isr can alter register state.
+      "mv a0, sp               \n"
+#endif
       "jal machine_isr            \n"
 
       "lw x0,   0*4(sp)        \n"
@@ -96,8 +100,11 @@ __attribute__((naked)) void machine_isr_wrapper() {
       "lw x7,   7*4(sp)        \n"
       "lw x8,   8*4(sp)        \n"
       "lw x9,   9*4(sp)        \n"
-      //"lw x10, 10*4(sp)        \n" // Do not reload x10 (aka a0), as
-      // it contains the isr return value
+#if defined(CONFIG_PLAT_NEXUS)
+      // On non-Nexus platforms do not reload x10 (aka a0), as
+      // it contains the isr return value.
+      "lw x10, 10*4(sp)        \n"
+#endif
       "lw x11, 11*4(sp)        \n"
       "lw x12, 12*4(sp)        \n"
       "lw x13, 13*4(sp)        \n"
@@ -132,9 +139,16 @@ uint32_t machine_bad_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
 
 uint32_t machine_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
                      uint32_t a4, uint32_t a5, uint32_t a6, uint32_t a7) {
+#if defined(CONFIG_PLAT_NEXUS)
+  // NB: a0 points to the register state saved on the stack (see above).
+  uint32_t *regs = (uint32_t*)a0;
+  a0 = regs[10];
+#endif // defined(CONFIG_PLAT_NEXUS)
   const uint32_t ENOSYS = 38; /* Invalid system call number */
-  uint32_t mcause;
+  uint32_t mcause, mtval, mepc;
   asm volatile("csrr %0, mcause" : "=r"(mcause) : :);
+  asm volatile("csrr %0, mtval" : "=r"(mtval) : :);
+  asm volatile("csrr %0, mepc" : "=r"(mepc) : :);
   if (mcause & 0x80000000) {
     machine_assert(false, "machine_isr unhandled interrupt\n");
     return -ENOSYS;
@@ -161,8 +175,34 @@ uint32_t machine_isr(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
       machine_assert(false, "machine_isr bad sbi call\n");
       return -ENOSYS;
     }
+#if defined(CONFIG_PLAT_NEXUS)
+  } else if (mcause == 2) {
+#define MATCH_RDTIME 0xc0102073
+#define MATCH_RDTIMEH 0xc8102073
+#define MASK_RDTIME  0xfffff07f
+#define MASK_RDTIMEH  0xfffff07f
+    // Emulate rdtime* for the Ibex (Renode's cpu mode implements these
+    // directly so they are never used on that platform).
+    int rd = (mtval >> 7) & 0x1f;
+    if ((mtval & MASK_RDTIME) == MATCH_RDTIME) {
+      uint64_t time = opentitan_timer_get_count();
+      uint32_t ret = (uint32_t)(time & 0xFFFFFFFF);
+      *(regs + rd) = ret;
+    } else if ((mtval & MASK_RDTIMEH) == MATCH_RDTIMEH) {
+      uint64_t time = opentitan_timer_get_count();
+      uint32_t ret = (uint32_t)((time >> 32) & 0xFFFFFFFF);
+      *(regs + rd) = ret;
+    } else {
+      machine_assert(false, "machine_isr unhandled illegal instruction\r\n");
+    }
+#undef MASK_RDTIMEH
+#undef MASK_RDTIME
+#undef MATCH_RDTIMEH
+#undef MATCH_RDTIME
+    return 0;
+#endif // defined(CONFIG_PLAT_NEXUS)
   } else {
-    machine_printf("mcause == %x\n", mcause);
+    machine_printf("mcause 0x%x mtval 0x%x mepc 0x%x\n", mcause, mtval, mepc);
     machine_assert(false, "machine_isr unhandled mcause\n");
   }
 

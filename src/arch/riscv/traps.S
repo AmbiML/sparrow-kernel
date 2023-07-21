@@ -25,7 +25,31 @@
 .extern restore_user_context
 
 trap_entry:
+#if defined(CONFIG_PLAT_NEXUS)
+// Vector mode trap table setup only for Nexus (Ibex cpu); see boot.c.
+.balign 256
+.option push
+.option norvc
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+j real_trap_entry
+.option pop
 
+real_trap_entry:
+#endif // defined(CONFIG_PLAT_NEXUS)
 #ifdef ENABLE_SMP_SUPPORT
 /* The sscratch contains the stack for the current core */
   csrrw sp, sscratch, sp

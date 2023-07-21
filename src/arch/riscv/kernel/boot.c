@@ -157,7 +157,19 @@ BOOT_CODE static void init_cpu(void)
 
     activate_kernel_vspace();
     /* Write trap entry address to stvec */
+#if defined(CONFIG_PLAT_NEXUS)
+    // Bottom two bits of stvec are for the MODE (masked away in trap
+    // address calculations). See sec 4.1.2 of the priviledged spec
+    // (https://github.com/riscv/riscv-isa-manual) for details.
+    //
+    // Enable vectored mode because that's the only mode supported
+    // by Ibex (Renode emulates either). We could enable this for all
+    // platforms but preserve upstream behaviour for non-Nexus platforms.
+    // NB: see traps.S for conditional vector mode setup.
+    write_stvec((word_t)trap_entry | 1);
+#else
     write_stvec((word_t)trap_entry);
+#endif
     initLocalIRQController();
 #ifndef CONFIG_KERNEL_MCS
     initTimer();
