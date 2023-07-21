@@ -17,11 +17,11 @@ if(KernelPlatformNexus)
         # implementing that, this can be set to any desired value, but until
         # then it needs to be set to the rate at which the value returned by
         # cpu1 rdtime is incremented.
-        TIMER_FREQUENCY 2500000
+        TIMER_FREQUENCY 1000000
 
         INTERRUPT_CONTROLLER drivers/irq/smc_plic.h
         # Must be >= kTopMatchaPlicIrqIdLastSmc in top_matcha.h
-        PLIC_MAX_NUM_INT 32
+        PLIC_MAX_NUM_INT 43
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)

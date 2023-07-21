@@ -62,9 +62,8 @@
       clock-frequency = < 2500000 >;
       reg = < 0x54011000 0x1000 >;
       interrupt-parent = <&plic0>;
-      // Placeholder interrupt number, not represented in top_matcha.h.
-      interrupts = <31>;
-      interrupts-extended = <&plic0 31>;
+      interrupts = <39>;
+      interrupts-extended = <&plic0 39>;
     };
     plic0: interrupt-controller@60000000 { // TOP_MATCHA_RV_PLIC_SMC_BASE_ADDR @ top_matcha.h
       #interrupt-cells = <1>;

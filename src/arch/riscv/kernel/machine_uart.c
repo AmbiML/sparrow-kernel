@@ -8,10 +8,10 @@
 
 // Machine-mode uart putchar + trivial printf for debugging.
 
-#ifdef CONFIG_PLAT_NEXUS
+#if defined(CONFIG_PLAT_NEXUS)
 #define UART0_BASE_ADDR 0x54000000
 #define MACHINE_UART_CLK_HZ (25ull * 100 * 1000)
-#elif CONFIG_PLAT_SPARROW
+#elif defined(CONFIG_PLAT_SPARROW)
 #define UART0_BASE_ADDR 0x50000000
 #define MACHINE_UART_CLK_HZ (48ull * 1000 * 1000)
 #else

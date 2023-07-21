@@ -8,10 +8,10 @@
 
 // Base address for the entire timer, defined in devices_gen.h based on the
 // device tree used at build time.
-#ifdef CONFIG_PLAT_SPARROW
+#if defined(CONFIG_PLAT_SPARROW)
 #define RV_TIMER_BASE 0x50010000
 #define RV_TIMER_CLOCK_HZ 24000000
-#elif CONFIG_PLAT_NEXUS
+#elif defined(CONFIG_PLAT_NEXUS)
 #define RV_TIMER_BASE 0x54010000
 #define RV_TIMER_CLOCK_HZ 2500000
 #else

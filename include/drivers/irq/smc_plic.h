@@ -34,7 +34,13 @@
 
 
 #define PLIC_THRES              0x200000
+#if defined(CONFIG_PLAT_SPARROW)
 #define PLIC_SVC_CONTEXT        1
+#elif defined(CONFIG_PLAT_NEXUS)
+#define PLIC_SVC_CONTEXT        0
+#else
+#error "Unknown/unsupported platform"
+#endif
 #define PLIC_THRES_PER_HART     0x2000
 #define PLIC_THRES_PER_CONTEXT  0x1000
 #define PLIC_THRES_CLAIM        0x4
@@ -167,15 +173,18 @@ static inline void plic_init_hart(void)
 
 static inline void plic_init_controller(void)
 {
-    // TODO(b/215715756): This doesn't do anything in sim other than cause noisy logs.
-    // Investigate whether this is necessary on real hardware.
-    // for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
-    //     /* Clear all pending bits */
-    //     if (plic_pending_interrupt(i)) {
-    //         readl(PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
-    //         writel(i, PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
-    //     }
-    // }
+#if !defined(CONFIG_PLAT_SPARROW)
+    // TODO(b/215715756): This doesn't do anything on Rende other than cause noisy logs,
+    //   so remove for Sparrow (Renode-only). For nexus on Renode we live with the
+    //   noise because it's required for real hardware.
+    for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
+        /* Clear all pending bits */
+        if (plic_pending_interrupt(i)) {
+            readl(PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
+            writel(i, PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
+        }
+    }
+#endif // CONFIG_PLAT_SPARROW
 
     /* Set the priorities of all interrupts to 1 */
     for (int i = 1; i < PLIC_MAX_IRQ + 1; i++) {
