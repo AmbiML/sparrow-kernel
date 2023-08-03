@@ -108,12 +108,7 @@ static irq_t getNewActiveIRQ(void)
         return ipi_get_irq();
 #endif
     } else if (sip & BIT(STIMER_IP)) {
-#if defined(CONFIG_PLAT_NEXUS)
-        irq_t irq = plic_get_claim();
-        return irq != irqInvalid ? irq : INTERRUPT_CORE_TIMER;
-#else
         return INTERRUPT_CORE_TIMER;
-#endif
     }
 
     return irqInvalid;
