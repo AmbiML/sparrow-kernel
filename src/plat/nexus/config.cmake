@@ -21,7 +21,7 @@ if(KernelPlatformNexus)
 
         INTERRUPT_CONTROLLER drivers/irq/smc_plic.h
         # Must be >= kTopMatchaPlicIrqIdLastSmc in top_matcha.h
-        PLIC_MAX_NUM_INT 43
+        PLIC_MAX_NUM_INT 42
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)
